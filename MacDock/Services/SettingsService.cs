@@ -1,0 +1,104 @@
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Text.Json;
+using MacDock.Models;
+
+namespace MacDock.Services;
+
+public class SettingsService
+{
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        WriteIndented = true,
+    };
+
+    private readonly string _dir;
+    private readonly string _file;
+
+    public SettingsService()
+    {
+        _dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "MacDock");
+        _file = Path.Combine(_dir, "settings.json");
+    }
+
+    public AppSettings Load()
+    {
+        try
+        {
+            if (File.Exists(_file))
+            {
+                var json = File.ReadAllText(_file);
+                var settings = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions);
+                if (settings != null)
+                {
+                    if (settings.Items.Count == 0)
+                        settings.Items = DefaultItems();
+                    return settings;
+                }
+            }
+        }
+        catch (Exception)
+        {
+            // 配置损坏时回退默认
+        }
+        var fresh = new AppSettings { Items = DefaultItems() };
+        return fresh;
+    }
+
+    public void Save(AppSettings settings)
+    {
+        try
+        {
+            Directory.CreateDirectory(_dir);
+            var json = JsonSerializer.Serialize(settings, JsonOptions);
+            File.WriteAllText(_file, json);
+        }
+        catch (Exception)
+        {
+            // 忽略写配置失败
+        }
+    }
+
+    public static AppSettings Defaults() => new() { Items = DefaultItems() };
+
+    public static List<DockItemModel> DefaultItems()
+    {
+        var items = new List<DockItemModel>();
+        items.Add(new DockItemModel { Name = "访达", TargetPath = "explorer.exe" });
+        items.Add(new DockItemModel { Name = "浏览器", TargetPath = FindBrowser() });
+        items.Add(new DockItemModel { Name = "设置", TargetPath = @"C:\Windows\ImmersiveControlPanel\SystemSettings.exe" });
+
+        var terminal = FindTerminal();
+        if (terminal != null)
+            items.Add(new DockItemModel { Name = "终端", TargetPath = terminal });
+
+        items.Add(new DockItemModel { Name = "记事本", TargetPath = "notepad.exe" });
+        items.Add(new DockItemModel { Name = "回收站", TargetPath = "shell:RecycleBinFolder" });
+        return items;
+    }
+
+    private static string FindBrowser()
+    {
+        string[] candidates =
+        {
+            @"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+            @"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
+            @"C:\Program Files\Google\Chrome\Application\chrome.exe",
+            @"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+            @"C:\Program Files\Mozilla Firefox\firefox.exe",
+        };
+        foreach (var c in candidates)
+            if (File.Exists(c)) return c;
+        return "msedge.exe";
+    }
+
+    private static string? FindTerminal()
+    {
+        var local = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"Microsoft\WindowsApps\WindowsTerminal.exe");
+        if (File.Exists(local)) return local;
+        var packages = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"Microsoft\WindowsApps\wt.exe");
+        if (File.Exists(packages)) return packages;
+        return null;
+    }
+}

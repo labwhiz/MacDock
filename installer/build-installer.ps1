@@ -1,0 +1,67 @@
+﻿# build-installer.ps1
+# 一键重新打包 MacDock-Setup.exe（发布 MacDock + 生成负载 + 编译安装器）
+$ErrorActionPreference = 'Stop'
+
+$instDir = $PSScriptRoot
+$root = Split-Path -Parent $PSScriptRoot
+$proj = Join-Path $root 'MacDock\MacDock.csproj'
+$publishDir = Join-Path $root 'publish\MacDock-fd'
+$csc = 'C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe'
+$ico = Join-Path $root 'MacDock\Assets\app.ico'
+
+# 1) 仅关闭从工作区启动的 MacDock（不影响其他位置已安装的版本），然后发布（框架依赖，目标机需装 .NET 8 桌面运行时）
+Get-Process MacDock -ErrorAction SilentlyContinue | Where-Object {
+    try { $_.Path -and $_.Path.StartsWith($root, [System.StringComparison]::OrdinalIgnoreCase) } catch { $false }
+} | Stop-Process -Force
+dotnet publish $proj -c Release -o $publishDir
+if ($LASTEXITCODE -ne 0) { throw 'dotnet publish 失败' }
+
+# 2) 生成内嵌负载 Payload.cs
+$files = @(
+  @{ Path = Join-Path $publishDir 'MacDock.exe';            Name = 'MacDock.exe' },
+  @{ Path = Join-Path $publishDir 'MacDock.dll';            Name = 'MacDock.dll' },
+  @{ Path = Join-Path $publishDir 'MacDock.deps.json';      Name = 'MacDock.deps.json' },
+  @{ Path = Join-Path $publishDir 'MacDock.runtimeconfig.json'; Name = 'MacDock.runtimeconfig.json' }
+)
+$sb = New-Object System.Text.StringBuilder
+[void]$sb.AppendLine('// Auto-generated payload (built by build-installer.ps1). Do not edit by hand.')
+[void]$sb.AppendLine('namespace MacDockSetup')
+[void]$sb.AppendLine('{')
+[void]$sb.AppendLine('    internal static class Payload')
+[void]$sb.AppendLine('    {')
+$names = New-Object System.Collections.Generic.List[string]
+foreach ($f in $files) {
+  $field = ($f.Name -replace '[\W]','_')
+  $names.Add($field)
+  $bytes = [System.IO.File]::ReadAllBytes($f.Path)
+  [void]$sb.AppendLine("        public static readonly byte[] $field = new byte[] {")
+  for ($i = 0; $i -lt $bytes.Length; $i += 18) {
+    $end = [Math]::Min($i + 18, $bytes.Length)
+    $line = ($bytes[$i..($end-1)] | ForEach-Object { '0x{0:X2},' -f $_ }) -join ' '
+    [void]$sb.AppendLine("            $line")
+  }
+  [void]$sb.AppendLine('        };')
+}
+[void]$sb.AppendLine('    }')
+[void]$sb.AppendLine('')
+[void]$sb.AppendLine('    internal static class PayloadFiles')
+[void]$sb.AppendLine('    {')
+[void]$sb.AppendLine('        public static readonly string[] Names =')
+[void]$sb.AppendLine('        {')
+foreach ($f in $files) { [void]$sb.AppendLine("            `"$($f.Name)`",") }
+[void]$sb.AppendLine('        };')
+[void]$sb.AppendLine('')
+[void]$sb.AppendLine('        public static readonly byte[][] Data = new byte[][]')
+[void]$sb.AppendLine('        {')
+foreach ($n in $names) { [void]$sb.AppendLine("            Payload.$n,") }
+[void]$sb.AppendLine('        };')
+[void]$sb.AppendLine('    }')
+[void]$sb.AppendLine('}')
+[System.IO.File]::WriteAllText((Join-Path $instDir 'Payload.cs'), $sb.ToString(), (New-Object System.Text.UTF8Encoding($false)))
+
+# 3) 编译安装器
+$outExe = Join-Path $instDir 'MacDock-Setup.exe'
+$csInstaller = Join-Path $instDir 'Installer.cs'
+$csSetupForm = Join-Path $instDir 'SetupForm.cs'
+$csPayload = Join-Path $instDir 'Payload.cs'
+& $csc /nologo /target:winexe /optimize+ /out:$outExe /win32icon:$ico $csInstaller $csSetupForm $csPayload
