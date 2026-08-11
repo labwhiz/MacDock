@@ -1,5 +1,8 @@
-﻿using System;
+﻿﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using MacDock.Models;
 
 namespace MacDock.Services;
 
@@ -75,6 +78,23 @@ public static class PathResolver
         }
 
         return targetPath;
+    }
+
+    /// <summary>将路径规范化、去重后添加到目标列表，返回是否添加成功。</summary>
+    public static bool TryAddPath(ICollection<DockItemModel> items, string rawPath)
+    {
+        var path = Normalize(rawPath);
+        if (string.IsNullOrEmpty(path)) return false;
+        if (items.Any(i => string.Equals(i.TargetPath, path, StringComparison.OrdinalIgnoreCase))) return false;
+        string name = Directory.Exists(path)
+            ? Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
+            : Path.GetFileNameWithoutExtension(path);
+        items.Add(new DockItemModel
+        {
+            Name = string.IsNullOrEmpty(name) ? path : name,
+            TargetPath = path,
+        });
+        return true;
     }
 }
 
