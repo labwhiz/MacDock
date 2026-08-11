@@ -414,7 +414,15 @@ public partial class SettingsWindow : Window
         ItemList.ItemsSource = _work.Items;
     }
 
-    /// <summary>外部（如 F3 快捷键）切换“被覆盖禁止唤出”后同步勾选框状态。</summary>
+    /// <summary>外部（如 F3 快捷键）切换“被覆盖禁止唤出”后同步 _work 与勾选框状态。</summary>
+    public void RefreshBlockMode(bool newValue)
+    {
+        _work.BlockShowWhenCovered = newValue;
+        if (ChkBlockShow.IsChecked != newValue)
+            ChkBlockShow.IsChecked = newValue;
+    }
+
+    /// <summary>兼容无参调用，读取 _work 当前值同步勾选框。</summary>
     public void RefreshBlockMode()
     {
         if (ChkBlockShow.IsChecked != _work.BlockShowWhenCovered)
