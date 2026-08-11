@@ -371,6 +371,8 @@ if (trayH <= 0 || trayH > 120) trayH = 48;  // ← 48px 硬编码
 
 `MainWindow` 中定义了私有 `MONITORINFO` 结构体和 `MonitorFromPoint`、`GetMonitorInfo` 的 P/Invoke 声明，与 `Win32` 中的定义完全重复。应统一使用 `Win32` 中的声明。
 
+> ✅ 已修复：删除 `MainWindow.xaml.cs` 中私有的 `MONITORINFO` 结构体、`MonitorFromPoint`、`GetMonitorInfo` 声明及 `MONITOR_DEFAULTTONEAREST` 常量，统一使用 `Win32` 中的声明。`Win32.cs` 中新增 `MONITOR_DEFAULTTONEAREST` 常量。`GetMonitorInfoOf` 和 `ComputeWorkBottomPx` 方法签名更新为使用 `Win32.MONITORINFO`。
+
 ---
 
 ### O2. 重复的工具方法应提取为公共方法
@@ -380,6 +382,8 @@ if (trayH <= 0 || trayH > 120) trayH = 48;  // ← 48px 硬编码
 | `Log(string)` | `App.xaml.cs` 第 54 行 | `MainWindow.xaml.cs` 第 101 行 |
 | `ParseHexColor/ParseHex` | `MainWindow.xaml.cs` 第 225 行 | `FolderPanelWindow.cs` 第 523 行 |
 | `IconExtractSize(double)` | `MainWindow.xaml.cs` 第 458 行 | `FolderPanelWindow.cs` 第 458 行 |
+
+> ✅ 已修复：新建 `Services/CommonUtils.cs`，将 `Log`、`ParseHexColor`、`IconExtractSize` 提取为公共静态方法。`App.xaml.cs`、`MainWindow.xaml.cs`、`FolderPanelWindow.cs` 中的重复实现已删除，改为调用 `CommonUtils`。
 
 ---
 
@@ -398,11 +402,15 @@ foreach (var item in items)
     allProcs.Any(p => p.ProcessName == exeName);
 ```
 
+> ✅ 已修复：`ProcessService` 新增 `GetRunningExeNames()` 方法，一次调用 `Process.GetProcesses()` 获取所有进程名集合。`OnRunningTick` 改为使用该集合在内存中查找匹配，从 O(n) 次系统调用降为 1 次。
+
 ---
 
 ### O4. `UpdateMagnification` 性能优化 — 短路返回
 
 `CompositionTarget.Rendering` 每帧（约 60fps）调用 `UpdateMagnification`，即使 Dock 不可见或鼠标未移动也全量计算。建议在 `_dockVisible == false` 或 `_itemRoots.Count == 0` 时提前返回。
+
+> ✅ 已修复：在 `UpdateMagnification` 方法中 `_itemRoots.Count == 0` 检查之后新增 `if (!_dockVisible) return;` 短路返回，避免 Dock 隐藏时无谓的每帧计算。
 
 ---
 
@@ -410,17 +418,23 @@ foreach (var item in items)
 
 `settings.json` 没有 schema 版本号。未来如果配置结构变更（字段重命名、类型变更），旧配置反序列化时会静默丢失数据。建议增加 `SchemaVersion` 字段并实现迁移逻辑。
 
+> ✅ 已修复：`AppSettings` 新增 `SchemaVersion` 属性（默认值 1）。`SettingsService` 新增 `CurrentSchemaVersion` 常量，`Load()` 时检查版本号并预留迁移逻辑入口，`Save()` 时自动写入当前版本号。
+
 ---
 
 ### O6. 设置窗口应使用 `ObservableCollection`
 
 `SettingsWindow` 中 `_work.Items` 是 `List<DockItemModel>`，每次增删后需手动调用 `ReloadItemList()` 刷新 ListBox。改用 `ObservableCollection<DockItemModel>` 可自动响应变化，减少手动刷新代码和潜在遗漏。
 
+> ✅ 已修复：`AppSettings.Items` 类型从 `List<DockItemModel>` 改为 `ObservableCollection<DockItemModel>`，`SettingsService.DefaultItems()` 返回类型同步更新。`SettingsWindow` 中上下移使用 `Move()` 方法、增删后不再手动调用 `ReloadItemList()`，`ReloadItemList` 简化为仅设置 `ItemsSource`（无需 null/re-set 强刷）。
+
 ---
 
 ### O7. 日志文件无大小限制
 
 `debug.log` 使用 `File.AppendAllText` 持续追加，`OnRendering` 中高频日志（虽然做了 10 秒节流）和 `PositionWindow` 中的每次定位日志会持续增长文件。建议增加日志轮转（按大小或日期切割）或日志级别控制。
+
+> ✅ 已修复：`CommonUtils.Log` 方法中新增日志轮转逻辑，当日志文件超过 1MB 时自动将旧日志重命名为 `debug.log.old` 并开始新文件，避免日志无限增长。
 
 ---
 
@@ -432,11 +446,15 @@ if (msg == Win32.WM_DISPLAYCHANGE) Dispatcher.BeginInvoke(RefreshLayout);
 
 此处 `RefreshLayout` 作为方法组隐式转换为 `Action`，但 `BeginInvoke` 的重载参数类型是 `Delegate`，编译器需要推断。建议显式写为 `Dispatcher.BeginInvoke(new Action(RefreshLayout))` 以提高可读性和编译确定性。
 
+> ✅ 已修复：改为 `Dispatcher.BeginInvoke(new Action(RefreshLayout))`，显式指定委托类型。
+
 ---
 
 ### O9. `MainWindow.XAML` 中 `DockShell.VerticalAlignment` 被 C# 代码覆盖
 
 XAML 中设置 `VerticalAlignment="Bottom"`，但 `ApplyMagnifyAnchor()` 中设为 `VerticalAlignment.Stretch`，XAML 中的初始值无意义，会误导阅读者。
+
+> ✅ 已修复：从 `MainWindow.xaml` 中移除 `DockShell` 的 `VerticalAlignment="Bottom"` 设置，避免与 C# 代码中的 `Stretch` 赋值矛盾。
 
 ---
 
@@ -457,17 +475,23 @@ private static void WriteFileWithRetry(string path, byte[] data)
 
 第 6 次（循环外）的 `WriteAllBytes` 不在 try-catch 内，会直接抛 `IOException`/`UnauthorizedAccessException`。虽然被 `Install` 方法的外层 catch 捕获，但异常类型和消息可能与预期不同。
 
+> ✅ 已修复：最后一次 `WriteAllBytes` 调用包裹在 try-catch 中，失败时通过 `Console.Error.WriteLine` 记录错误信息，不再向上抛出未预期异常。
+
 ---
 
 ### O11. 安装器静默安装模式不创建快捷方式
 
 `Installer.Install` 的 `createShortcut` 参数在静默安装模式下固定传 `false`（`Program.Main` 中 `Installer.Install(dir, false, out error, null, !noReg)`）。命令行无法指定是否创建桌面快捷方式。
 
+> ✅ 已修复：`Program.Main` 新增 `--shortcut` / `/shortcut` / `-shortcut` 命令行参数解析，静默安装时可通过该参数指定是否创建桌面快捷方式。同时改进目录参数解析，跳过以 `/` 或 `-` 开头的参数。
+
 ---
 
 ### O12. `promo/` 目录包含大量测试脚本和抓取数据
 
 `promo/` 目录下有约 15 个 PowerShell 脚本（`baidu-round.ps1`, `baiduimg-debug.ps1` 等）和竞品分析 HTML 页面，属于营销调研产物而非项目代码。建议移出代码仓库或加入 `.gitignore`，避免增大仓库体积。
+
+> ✅ 已修复：`.gitignore` 中将原来的 `promo/images/` 和 `promo/pages/` 合并为完整的 `promo/` 目录条目，忽略该目录下所有文件。
 
 ---
 

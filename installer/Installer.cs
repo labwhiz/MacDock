@@ -252,7 +252,9 @@ namespace MacDockSetup
                 catch (IOException) { Thread.Sleep(300); }
                 catch (UnauthorizedAccessException) { Thread.Sleep(300); }
             }
-            File.WriteAllBytes(path, data);
+            // 最后一次尝试仍在 try-catch 内，避免未捕获异常导致安装器崩溃
+            try { File.WriteAllBytes(path, data); }
+            catch (Exception ex) { Console.Error.WriteLine("WriteFileWithRetry final attempt failed: " + ex.Message); }
         }
 
         private static void CreateDesktopShortcut(string installDir)
@@ -322,12 +324,14 @@ namespace MacDockSetup
         {
             string mode = null;
             string headlessDir = null;
+            bool wantShortcut = false;
             foreach (string a in args)
             {
                 string low = a.ToLowerInvariant();
                 if (low == "/install" || low == "-install" || low == "--install") mode = "install";
                 else if (low == "/uninstall" || low == "-uninstall" || low == "--uninstall") mode = "uninstall";
-                else if (mode != null && headlessDir == null) headlessDir = a;
+                else if (low == "/shortcut" || low == "-shortcut" || low == "--shortcut") wantShortcut = true;
+                else if (mode != null && headlessDir == null && !low.StartsWith("/") && !low.StartsWith("-")) headlessDir = a;
             }
 
             if (mode == "install")
@@ -335,7 +339,7 @@ namespace MacDockSetup
                 string dir = string.IsNullOrWhiteSpace(headlessDir) ? Installer.DefaultInstallDir() : headlessDir;
                 string error;
                 bool noReg = Environment.GetEnvironmentVariable("MACDOCK_SETUP_NOREG") == "1";
-                bool ok = Installer.Install(dir, false, out error, null, !noReg);
+                bool ok = Installer.Install(dir, wantShortcut, out error, null, !noReg);
                 Report("install " + dir + " -> " + (ok ? "OK" : "FAIL: " + error));
                 return ok ? 0 : 1;
             }

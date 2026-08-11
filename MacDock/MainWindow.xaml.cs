@@ -21,27 +21,10 @@ namespace MacDock;
 public partial class MainWindow : Window
 {
     // ---------- 原生互操作 ----------
-    [StructLayout(LayoutKind.Sequential)]
-    private struct MONITORINFO
-    {
-        public int cbSize;
-        public Win32.RECT rcMonitor;
-        public Win32.RECT rcWork;
-        public uint dwFlags;
-    }
-
-    [DllImport("user32.dll")]
-    private static extern IntPtr MonitorFromPoint(Win32.POINT pt, uint dwFlags);
-
-    [DllImport("user32.dll")]
-    private static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFO lpmi);
-
     [DllImport("dwmapi.dll")]
     private static extern int DwmGetWindowAttribute(IntPtr hwnd, int dwAttribute, out int pvAttribute, int cbAttribute);
 
     private const int DWMWA_CLOAKED = 14;
-    private const uint MONITOR_DEFAULTTONEAREST = 2;
-    private const double SlideSeconds = 0.18;
 
     private readonly SettingsService _settingsService = new();
     private readonly HotkeyService _hotkey = new();                    // F2：隐藏桌面图标
@@ -98,24 +81,7 @@ public partial class MainWindow : Window
     private DateTime _lastShowUtc = DateTime.MinValue;
     private DateTime _nextCoverLogUtc = DateTime.MinValue;
     private DateTime _nextRenderErrLogUtc = DateTime.MinValue;
-    private static void Log(string msg)
-    {
-        var line = $"{DateTime.Now:HH:mm:ss.fff} {msg}\r\n";
-        for (int attempt = 0; attempt < 3; attempt++)
-        {
-            try
-            {
-                var dir = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "MacDock");
-                System.IO.Directory.CreateDirectory(dir);
-                System.IO.File.AppendAllText(System.IO.Path.Combine(dir, "debug.log"), line);
-                return;
-            }
-            catch
-            {
-                System.Threading.Thread.Sleep(30);
-            }
-        }
-    }
+    private static void Log(string msg) => CommonUtils.Log(msg);
 
     public MainWindow()
     {
@@ -207,7 +173,7 @@ public partial class MainWindow : Window
 
     private void ApplyBackground()
     {
-        var color = ParseHexColor(_settings.BackgroundColor, Color.FromRgb(0x26, 0x26, 0x2E));
+        var color = CommonUtils.ParseHexColor(_settings.BackgroundColor, Color.FromRgb(0x26, 0x26, 0x2E));
         byte alpha = _settings.BackgroundStyle switch
         {
             "Solid" => (byte)255,
@@ -216,28 +182,19 @@ public partial class MainWindow : Window
         };
         DockShell.Background = new SolidColorBrush(Color.FromArgb(alpha, color.R, color.G, color.B));
         DockShell.BorderThickness = _settings.ShowBorder ? new Thickness(1) : new Thickness(0);
-        DockShell.BorderBrush = new SolidColorBrush(ParseHexColor(_settings.BorderColor, Color.FromArgb(0x55, 0xFF, 0xFF, 0xFF)));
+        DockShell.BorderBrush = new SolidColorBrush(CommonUtils.ParseHexColor(_settings.BorderColor, Color.FromArgb(0x55, 0xFF, 0xFF, 0xFF)));
         DockShell.CornerRadius = new CornerRadius(Math.Max(0, _settings.CornerRadius));
         // 全部改由 WPF 分层渲染完成：不再调用 DWM 特效 / SetWindowRgn。
         // 避免纯色与毛玻璃出现残留方框不跟随隐藏的问题。
     }
 
-    private static Color ParseHexColor(string? hex, Color fallback)
-    {
-        try
-        {
-            if (!string.IsNullOrWhiteSpace(hex))
-                return (Color)ColorConverter.ConvertFromString(hex);
-        }
-        catch (Exception) { }
-        return fallback;
-    }
+    // ParseHexColor 已移至 CommonUtils.ParseHexColor
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
         if (_hotkey.OnWndProc(hwnd, msg, wParam, lParam)) handled = true;
         if (_blockHotkey.OnWndProc(hwnd, msg, wParam, lParam)) handled = true;
-        if (msg == Win32.WM_DISPLAYCHANGE) Dispatcher.BeginInvoke(RefreshLayout);
+        if (msg == Win32.WM_DISPLAYCHANGE) Dispatcher.BeginInvoke(new Action(RefreshLayout));
         return IntPtr.Zero;
     }
 
@@ -346,7 +303,7 @@ public partial class MainWindow : Window
     }
 
     // 与 ComputeMetrics 共用同一套“工作区底边（含任务栏规避）”计算，避免两者偏差被误判为显示器变化
-    private double ComputeWorkBottomPx(MONITORINFO mon, bool dockTop)
+    private double ComputeWorkBottomPx(Win32.MONITORINFO mon, bool dockTop)
     {
         if (dockTop) return mon.rcWork.Bottom;
         double monitorBottomPx = mon.rcMonitor.Bottom;
@@ -384,11 +341,11 @@ public partial class MainWindow : Window
         return bottomPx;
     }
 
-    private MONITORINFO GetMonitorInfoOf(Win32.POINT pt)
+    private Win32.MONITORINFO GetMonitorInfoOf(Win32.POINT pt)
     {
-        var mon = MonitorFromPoint(pt, MONITOR_DEFAULTTONEAREST);
-        var info = new MONITORINFO { cbSize = Marshal.SizeOf<MONITORINFO>() };
-        GetMonitorInfo(mon, ref info);
+        var mon = Win32.MonitorFromPoint(pt, Win32.MONITOR_DEFAULTTONEAREST);
+        var info = new Win32.MONITORINFO { cbSize = Marshal.SizeOf<Win32.MONITORINFO>() };
+        Win32.GetMonitorInfo(mon, ref info);
         return info;
     }
 
@@ -454,9 +411,7 @@ public partial class MainWindow : Window
         RefreshLayout();
     }
 
-    /// <summary>图标提取尺寸按 16px 取整分桶，拖动尺寸滑块时复用缓存图标，避免 UI 卡顿。</summary>
-    private static int IconExtractSize(double displaySize) =>
-        Math.Max(32, (int)(Math.Round(displaySize * 2 / 16.0) * 16));
+    // IconExtractSize 已移至 CommonUtils.IconExtractSize
 
     private Grid CreateItemVisual(DockItemModel item)
     {
@@ -492,7 +447,7 @@ public partial class MainWindow : Window
 
         var img = new Image
         {
-            Source = IconService.GetItemIcon(item, IconExtractSize(size)),
+            Source = IconService.GetItemIcon(item, CommonUtils.IconExtractSize(size)),
             Width = size,
             Height = size,
             Stretch = Stretch.Uniform,
@@ -534,7 +489,7 @@ public partial class MainWindow : Window
                 img.Width = size;
                 img.Height = size;
                 if (sizeChanged)
-                    img.Source = IconService.GetItemIcon(item, IconExtractSize(size));
+                    img.Source = IconService.GetItemIcon(item, CommonUtils.IconExtractSize(size));
             }
         }
         if (sizeChanged)
@@ -849,7 +804,7 @@ public partial class MainWindow : Window
         if (_dragging)
         {
             var order = ItemsHost.Children.OfType<Grid>().Select(g => g.Tag).OfType<DockItemModel>().ToList();
-            _settings.Items = order;
+            _settings.Items = new System.Collections.ObjectModel.ObservableCollection<DockItemModel>(order);
             SaveSettings();
         }
         else if (!_clickMoved && _dragIndex >= 0 && _dragIndex < _settings.Items.Count)
@@ -956,6 +911,7 @@ public partial class MainWindow : Window
     {
         int count = _itemRoots.Count;
         if (count == 0) return;
+        if (!_dockVisible) return;
         var cursor = GetCursorScreenPoint();
         var local = PointFromScreen(new Point(cursor.X, cursor.Y));
         double boost = Math.Clamp(_settings.MagnifyBoost, 0, 2);
@@ -1027,10 +983,19 @@ public partial class MainWindow : Window
 
     private void OnRunningTick(object? sender, EventArgs e)
     {
+        var runningSet = ProcessService.GetRunningExeNames();
         foreach (var root in _itemRoots)
         {
             if (root.Tag is not DockItemModel item) continue;
-            bool running = ProcessService.IsRunning(item.TargetPath);
+            bool running;
+            if (item.TargetPath.StartsWith("shell:", StringComparison.OrdinalIgnoreCase))
+                running = false;
+            else
+            {
+                var exeName = System.IO.Path.GetFileNameWithoutExtension(PathResolver.Resolve(item.TargetPath));
+                running = !string.IsNullOrEmpty(exeName) &&
+                          (exeName.Equals("explorer", StringComparison.OrdinalIgnoreCase) || runningSet.Contains(exeName));
+            }
             if (running == item.IsRunning) continue;
             item.IsRunning = running;
             var dot = root.Children.OfType<Ellipse>().FirstOrDefault();

@@ -1,10 +1,13 @@
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Text.Json.Serialization;
 
 namespace MacDock.Models;
 
 public class AppSettings
 {
+    /// <summary>配置模式版本号，用于未来配置迁移。</summary>
+    public int SchemaVersion { get; set; } = 1;
     /// <summary>图标基础尺寸（像素）。</summary>
     public int IconSize { get; set; } = 48;
 
@@ -84,7 +87,7 @@ public class AppSettings
     [System.Text.Json.Serialization.JsonIgnore]
     public bool TaskbarAutoHide { get; set; }
 
-    public List<DockItemModel> Items { get; set; } = new();
+    public ObservableCollection<DockItemModel> Items { get; set; } = new();
 
     public AppSettings Clone()
     {

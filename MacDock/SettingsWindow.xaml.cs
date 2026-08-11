@@ -410,7 +410,7 @@ public partial class SettingsWindow : Window
 
     private void ReloadItemList()
     {
-        ItemList.ItemsSource = null;
+        // ObservableCollection 自动通知增删变化，无需 null/re-set 强刷
         ItemList.ItemsSource = _work.Items;
     }
 
@@ -460,7 +460,6 @@ public partial class SettingsWindow : Window
                 TargetPath = file,
             });
         }
-        ReloadItemList();
         UpdateButtons();
         Save();
         ItemsChanged?.Invoke(_work);
@@ -484,7 +483,6 @@ public partial class SettingsWindow : Window
             TargetPath = folder,
             FolderItems = BuiltinFolderScanner.Scan(folder),
         });
-        ReloadItemList();
         UpdateButtons();
         Save();
         ItemsChanged?.Invoke(_work);
@@ -522,7 +520,6 @@ public partial class SettingsWindow : Window
             });
         }
         TxtPath.Clear();
-        ReloadItemList();
         UpdateButtons();
         Save();
         ItemsChanged?.Invoke(_work);
@@ -532,8 +529,7 @@ public partial class SettingsWindow : Window
     {
         int i = ItemList.SelectedIndex;
         if (i <= 0) return;
-        (_work.Items[i], _work.Items[i - 1]) = (_work.Items[i - 1], _work.Items[i]);
-        ReloadItemList();
+        _work.Items.Move(i, i - 1);
         ItemList.SelectedIndex = i - 1;
         Save();
         ItemsChanged?.Invoke(_work);
@@ -543,8 +539,7 @@ public partial class SettingsWindow : Window
     {
         int i = ItemList.SelectedIndex;
         if (i < 0 || i >= _work.Items.Count - 1) return;
-        (_work.Items[i], _work.Items[i + 1]) = (_work.Items[i + 1], _work.Items[i]);
-        ReloadItemList();
+        _work.Items.Move(i, i + 1);
         ItemList.SelectedIndex = i + 1;
         Save();
         ItemsChanged?.Invoke(_work);
@@ -555,7 +550,6 @@ public partial class SettingsWindow : Window
         int i = ItemList.SelectedIndex;
         if (i < 0) return;
         _work.Items.RemoveAt(i);
-        ReloadItemList();
         UpdateButtons();
         Save();
         ItemsChanged?.Invoke(_work);

@@ -1,5 +1,6 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Text.Json;
 using MacDock.Models;
@@ -8,6 +9,7 @@ namespace MacDock.Services;
 
 public class SettingsService
 {
+    private const int CurrentSchemaVersion = 1;
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true,
@@ -34,6 +36,11 @@ public class SettingsService
                 {
                     if (settings.Items.Count == 0)
                         settings.Items = DefaultItems();
+                    // 配置版本迁移：未来版本号变更时在此补充迁移逻辑
+                    if (settings.SchemaVersion < CurrentSchemaVersion)
+                    {
+                        settings.SchemaVersion = CurrentSchemaVersion;
+                    }
                     return settings;
                 }
             }
@@ -50,6 +57,7 @@ public class SettingsService
     {
         try
         {
+            settings.SchemaVersion = CurrentSchemaVersion;
             Directory.CreateDirectory(_dir);
             var json = JsonSerializer.Serialize(settings, JsonOptions);
             File.WriteAllText(_file, json);
@@ -62,9 +70,9 @@ public class SettingsService
 
     public static AppSettings Defaults() => new() { Items = DefaultItems() };
 
-    public static List<DockItemModel> DefaultItems()
+    public static ObservableCollection<DockItemModel> DefaultItems()
     {
-        var items = new List<DockItemModel>();
+        var items = new ObservableCollection<DockItemModel>();
         items.Add(new DockItemModel { Name = "访达", TargetPath = "explorer.exe" });
         items.Add(new DockItemModel { Name = "浏览器", TargetPath = FindBrowser() });
         items.Add(new DockItemModel { Name = "设置", TargetPath = @"C:\Windows\ImmersiveControlPanel\SystemSettings.exe" });

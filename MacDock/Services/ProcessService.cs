@@ -1,4 +1,5 @@
-﻿﻿using System;
+﻿﻿﻿﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -9,6 +10,29 @@ namespace MacDock.Services;
 
 public static class ProcessService
 {
+    /// <summary>获取当前所有运行中的进程名集合（小写），供批量判断使用，避免逐个调用 GetProcessesByName。</summary>
+    public static HashSet<string> GetRunningExeNames()
+    {
+        var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        try
+        {
+            var procs = Process.GetProcesses();
+            try
+            {
+                foreach (var p in procs)
+                {
+                    try { set.Add(p.ProcessName); } catch { }
+                }
+            }
+            finally
+            {
+                foreach (var p in procs) p.Dispose();
+            }
+        }
+        catch { }
+        return set;
+    }
+
     /// <summary>判断某个 exe 名对应的进程是否在运行。</summary>
     public static bool IsRunning(string targetPath)
     {
