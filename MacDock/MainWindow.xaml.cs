@@ -150,8 +150,16 @@ public partial class MainWindow : Window
         try { ApplyTaskbarLock(false); } catch (Exception) { }
         _tray?.Dispose();
         try { SaveSettings(); } catch (Exception) { }
-        // 托盘应用：主窗口关闭且无其他窗口（如设置窗）时彻底退出，避免残留后台进程占用单实例锁
-        try { if (Application.Current.Windows.Count <= 1) Application.Current.Shutdown(); } catch (Exception) { }
+        // 托盘应用：主窗口关闭且无其他窗口（如设置窗）时彻底退出，避免残留后台进程占用单实例锁。
+        // 排除自身（此时仍在 Windows 集合中）后计数，避免 SettingsWindow 尚未完成关闭时误判为还有窗口。
+        try
+        {
+            int other = 0;
+            foreach (Window w in Application.Current.Windows)
+                if (w != this) other++;
+            if (other == 0) Application.Current.Shutdown();
+        }
+        catch (Exception) { }
     }
 
     // ================= 窗口初始化 =================

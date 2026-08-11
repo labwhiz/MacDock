@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -128,15 +128,18 @@ namespace MacDockSetup
                 }
                 catch { }
 
-                try
+                if (cleanRegistry)
                 {
-                    using (RegistryKey run = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run", true))
+                    try
                     {
-                        if (run != null) run.DeleteValue(AppInfo.RunValueName, false);
+                        using (RegistryKey run = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run", true))
+                        {
+                            if (run != null) run.DeleteValue(AppInfo.RunValueName, false);
+                        }
+                        Registry.CurrentUser.DeleteSubKeyTree(AppInfo.UninstallSubKey, false);
                     }
-                    Registry.CurrentUser.DeleteSubKeyTree(AppInfo.UninstallSubKey, false);
+                    catch { }
                 }
-                catch { }
 
                 string[] known = new string[]
                 {

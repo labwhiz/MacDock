@@ -745,6 +745,7 @@ public partial class SettingsWindow : Window
         _work.DockOffsetX = def.DockOffsetX;
         _work.CornerRadius = def.CornerRadius;
         _work.EdgeHotzoneSize = def.EdgeHotzoneSize;
+        _work.FolderPanelGap = def.FolderPanelGap;
         _work.BackgroundStyle = def.BackgroundStyle;
         _work.BackgroundColor = def.BackgroundColor;
         _work.BackgroundOpacity = def.BackgroundOpacity;

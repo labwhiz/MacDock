@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Threading;
 using System.Windows;
 using MacDock.Services;
@@ -39,6 +39,7 @@ public partial class App : Application
         catch (Exception ex)
         {
             Log("MainWindow ctor EX: " + ex);
+            Shutdown(1);
             return;
         }
         try
