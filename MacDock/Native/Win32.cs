@@ -12,10 +12,7 @@ internal static class Win32
     public const int WM_HOTKEY = 0x0312;
     public const int WM_DISPLAYCHANGE = 0x007E;
     public const uint MONITOR_DEFAULTTONEAREST = 2;
-    public const int GW_HWNDNEXT = 2;
-    public const int GW_HWNDPREV = 3;
     public const uint WS_EX_TOOLWINDOW = 0x00000080;
-    public const uint WS_EX_APPWINDOW = 0x00040000;
     public const uint WS_EX_TRANSPARENT = 0x00000020;
     public const uint MOD_ALT = 0x0001;
     public const uint MOD_CONTROL = 0x0002;
@@ -55,24 +52,17 @@ internal static class Win32
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
     public static extern IntPtr GetModuleHandle(string lpModuleName);
 
-    public const uint ABM_GETSTATE = 0x00000004;
     public const uint ABM_GETTASKBARPOS = 0x00000005;
-    public const uint ABM_SETSTATE = 0x0000000A;
-    public const uint ABS_AUTOHIDE = 0x0000001;
-    public const uint ABS_ALWAYSONTOP = 0x0000002;
     public const uint ABE_BOTTOM = 3;
 
     // SHGetFileInfo flags
     public const uint SHGFI_ICON = 0x100;
     public const uint SHGFI_LARGEICON = 0x0;
-    public const uint SHGFI_SMALLICON = 0x1;
-    public const uint SHGFI_TYPENAME = 0x400;
 
     public const int S_OK = 0;
 
     // IShellItemImageFactory flags
     public const uint SIIGBF_BIGGERSIZEOK = 0x1;
-    public const uint SIIGBF_MEMORYONLY = 0x2;
     public const uint SIIGBF_ICONONLY = 0x4;
     public const uint SIIGBF_SCALEUP = 0x100;
 
@@ -162,9 +152,6 @@ internal static class Win32
     public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
 
     [DllImport("user32.dll")]
-    public static extern bool GetClientRect(IntPtr hWnd, out RECT lpRect);
-
-    [DllImport("user32.dll")]
     public static extern bool IsWindowVisible(IntPtr hWnd);
 
     [DllImport("user32.dll")]
@@ -200,14 +187,8 @@ internal static class Win32
     [DllImport("user32.dll")]
     public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 
-    [DllImport("user32.dll")]
-    public static extern int GetWindowLong(IntPtr hWnd, int nIndex);
-
     [DllImport("user32.dll", EntryPoint = "GetWindowLongPtr")]
     public static extern IntPtr GetWindowLongPtr(IntPtr hWnd, int nIndex);
-
-    [DllImport("user32.dll")]
-    public static extern IntPtr GetWindow(IntPtr hWnd, uint uCmd);
 
     [DllImport("user32.dll", EntryPoint = "SetWindowLongPtr")]
     public static extern IntPtr SetWindowLongPtr(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
@@ -235,15 +216,6 @@ internal static class Win32
     [DllImport("user32.dll")]
     public static extern IntPtr FindWindowEx(IntPtr hWndParent, IntPtr hWndChildAfter, string? lpszClass, string? lpszWindow);
 
-    [DllImport("user32.dll")]
-    public static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
-
-    [DllImport("user32.dll")]
-    public static extern IntPtr SetWindowRgn(IntPtr hWnd, IntPtr hRgn, bool bRedraw);
-
-    [DllImport("gdi32.dll")]
-    public static extern IntPtr CreateRoundRectRgn(int x1, int y1, int x2, int y2, int w, int h);
-
     [DllImport("gdi32.dll")]
     public static extern bool DeleteObject(IntPtr hObject);
 
@@ -264,101 +236,8 @@ internal static class Win32
         ref Guid riid,
         [MarshalAs(UnmanagedType.Interface)] out object ppv);
 
-    [DllImport("shell32.dll")]
-    public static extern bool SHGetPathFromIDListW(IntPtr pidl, [MarshalAs(UnmanagedType.LPWStr)] StringBuilder pszPath);
-
-    // ---- Dwm ----
-    [DllImport("dwmapi.dll")]
-    public static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
-
     // ---- Kernel32 ----
 
-    public const int DWMWA_WINDOW_CORNER_PREFERENCE = 33;
-    public const int DWMWCP_ROUND = 2;
-}
-
-internal static class GlassHelper
-{
-    public enum AccentState
-    {
-        ACCENT_DISABLED = 0,
-        ACCENT_ENABLE_GRADIENT = 1,
-        ACCENT_ENABLE_TRANSPARENTGRADIENT = 2,
-        ACCENT_ENABLE_BLURBEHIND = 3,
-        ACCENT_ENABLE_ACRYLICBLURBEHIND = 4,
-        ACCENT_ENABLE_HOSTBACKDROP = 5,
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct ACCENT_POLICY
-    {
-        public int AccentState;
-        public int AccentFlags;
-        public int GradientColor;
-        public int AnimationId;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct WINDOWCOMPOSITIONATTRIBDATA
-    {
-        public int Attribute;
-        public IntPtr Data;
-        public int SizeOfData;
-    }
-
-    private enum WindowCompositionAttribute
-    {
-        WCA_ACCENT_POLICY = 19,
-    }
-
-    [DllImport("user32.dll")]
-    private static extern int SetWindowCompositionAttribute(IntPtr hwnd, ref WINDOWCOMPOSITIONATTRIBDATA data);
-
-    /// <summary>应用亚克力/模糊背景，成功返回 true。gradientColor 为 ARGB。</summary>
-    public static bool ApplyAcrylic(IntPtr hwnd, int gradientColorArgb)
-    {
-        int tint = ToAbgr(gradientColorArgb);
-        if (ApplyAccent(hwnd, AccentState.ACCENT_ENABLE_ACRYLICBLURBEHIND, tint)) return true;
-        if (ApplyAccent(hwnd, AccentState.ACCENT_ENABLE_BLURBEHIND, 0)) return true;
-        return false;
-    }
-
-    /// <summary>Win11 主机背景（HOSTBACKDROP），亚克力失败时的备选。</summary>
-    public static bool ApplyHostBackdrop(IntPtr hwnd, int gradientColorArgb)
-    {
-        return ApplyAccent(hwnd, AccentState.ACCENT_ENABLE_HOSTBACKDROP, ToAbgr(gradientColorArgb));
-    }
-
-    private static int ToAbgr(int argb)
-    {
-        uint c = (uint)argb;
-        return unchecked((int)((c & 0xFF000000) | ((c & 0x00FF0000) >> 16) | (c & 0x0000FF00) | ((c & 0x000000FF) << 16)));
-    }
-
-    private static bool ApplyAccent(IntPtr hwnd, AccentState state, int tint)
-    {
-        var accent = new ACCENT_POLICY
-        {
-            AccentState = (int)state,
-            AccentFlags = 2, // draw all borders
-            GradientColor = tint,
-        };
-        var data = new WINDOWCOMPOSITIONATTRIBDATA
-        {
-            Attribute = (int)WindowCompositionAttribute.WCA_ACCENT_POLICY,
-            Data = Marshal.AllocHGlobal(Marshal.SizeOf<ACCENT_POLICY>()),
-            SizeOfData = Marshal.SizeOf<ACCENT_POLICY>(),
-        };
-        try
-        {
-            Marshal.StructureToPtr(accent, data.Data, false);
-            return SetWindowCompositionAttribute(hwnd, ref data) != 0;
-        }
-        finally
-        {
-            Marshal.FreeHGlobal(data.Data);
-        }
-    }
 }
 
 internal static class ShellItemInterop

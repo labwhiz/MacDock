@@ -6,7 +6,6 @@ namespace MacDock.Models;
 /// <summary>Dock 中的单个应用项。</summary>
 public class DockItemModel
 {
-    public string Id { get; set; } = System.Guid.NewGuid().ToString("N");
     public string Name { get; set; } = "";
     /// <summary>exe / lnk / shell: 路径。</summary>
     public string TargetPath { get; set; } = "";

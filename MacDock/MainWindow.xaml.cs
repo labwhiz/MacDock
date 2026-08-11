@@ -1040,26 +1040,6 @@ public partial class MainWindow : Window
         }
     }
 
-    private void LogTickState()
-    {
-        string msg;
-        if (_hwnd != IntPtr.Zero && Win32.GetWindowRect(_hwnd, out var r))
-            msg = $"state dockVisible={_dockVisible} slideY={_slideY:F1} opacity={_opacity:F2} winVis={Win32.IsWindowVisible(_hwnd)} rect={r.Left},{r.Top}-{r.Right},{r.Bottom}";
-        else
-            msg = $"state hwnd={_hwnd} no-rect";
-        Log(msg);
-        try
-        {
-            var dir = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "MacDock");
-            System.IO.Directory.CreateDirectory(dir);
-            System.IO.File.WriteAllText(System.IO.Path.Combine(dir, "state.log"), msg + "\r\n");
-        }
-        catch (Exception ex)
-        {
-            Log("state EX: " + ex.Message);
-        }
-    }
-
     private static Win32.POINT GetCursorScreenPoint()
     {
         Win32.GetCursorPos(out var pt);
@@ -1150,8 +1130,6 @@ public partial class MainWindow : Window
     }
 
     private bool IsCovered() => IsCoveredByVisibleWindows(IntendedDockRect());
-
-    private bool IsCoveredByVisibleWindows() => IsCoveredByVisibleWindows(IntendedDockRect());
 
     private bool IsCoveredByVisibleWindows(Win32.RECT dockRect)
     {
