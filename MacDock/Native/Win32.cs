@@ -1,4 +1,4 @@
-﻿﻿using System;
+﻿﻿﻿﻿using System;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -83,10 +83,12 @@ internal static class Win32
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    public struct POINT
-    {
-        public int X;
-        public int Y;
+public struct POINT
+{
+    /// <summary>物理像素 X 坐标（小写以区分 WPF Point.X 的 DIP 坐标）。</summary>
+    public int x;
+    /// <summary>物理像素 Y 坐标（小写以区分 WPF Point.Y 的 DIP 坐标）。</summary>
+    public int y;
     }
 
     [StructLayout(LayoutKind.Sequential)]

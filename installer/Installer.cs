@@ -1,4 +1,4 @@
-﻿﻿using System;
+﻿﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -225,7 +225,8 @@ namespace MacDockSetup
                     {
                         try
                         {
-                            string exePath = p.MainModule != null ? p.MainModule.FileName : null;
+                            string exePath = null;
+                            try { exePath = p.MainModule?.FileName; } catch { }
                             if (!string.IsNullOrEmpty(exePath) &&
                                 string.Equals(Path.GetDirectoryName(exePath), installDir, StringComparison.OrdinalIgnoreCase))
                             {

@@ -361,7 +361,8 @@ public partial class MainWindow : Window
                 if (onThisMonitor && atBottom)
                 {
                     int trayH = mon.rcMonitor.Bottom - mon.rcWork.Bottom;
-                    if (trayH <= 0 || trayH > 120)
+                    int maxTrayH = (int)(120 * _dpiScale);
+                    if (trayH <= 0 || trayH > maxTrayH)
                     {
                         var barData = new Win32.APPBARDATA
                         {
@@ -372,7 +373,7 @@ public partial class MainWindow : Window
                         Win32.SHAppBarMessage(Win32.ABM_GETTASKBARPOS, ref barData);
                         trayH = barData.rc.Height;
                     }
-                    if (trayH <= 0 || trayH > 120) trayH = 48;
+                    if (trayH <= 0 || trayH > maxTrayH) trayH = (int)(48 * _dpiScale);
                     bottomPx = monitorBottomPx - trayH;
                 }
             }
@@ -830,7 +831,8 @@ public partial class MainWindow : Window
         if (_dragging && _settings.Items.Count > 1)
         {
             int target = IndexFromX(pos.X);
-            if (target >= 0 && target < ItemsHost.Children.Count && target != _dragIndex)
+            if (target >= 0 && target < ItemsHost.Children.Count && target != _dragIndex
+                && _dragIndex >= 0 && _dragIndex < ItemsHost.Children.Count)
             {
                 var el = ItemsHost.Children[_dragIndex];
                 ItemsHost.Children.RemoveAt(_dragIndex);
@@ -957,7 +959,7 @@ public partial class MainWindow : Window
         int count = _itemRoots.Count;
         if (count == 0) return;
         var cursor = GetCursorScreenPoint();
-        var local = PointFromScreen(new Point(cursor.X, cursor.Y));
+        var local = PointFromScreen(new Point(cursor.x, cursor.y));
         double boost = Math.Clamp(_settings.MagnifyBoost, 0, 2);
         double pad = 10;
         double borderT = _settings.ShowBorder ? 1 : 0;
@@ -1121,22 +1123,22 @@ public partial class MainWindow : Window
         var mon = GetMonitorInfoOf(cursor);
         double zone = Math.Max(4, _settings.EdgeHotzoneSize) * _dpiScale;
         return _settings.DockPosition == "TopCenter"
-            ? cursor.Y <= mon.rcWork.Top + zone
-            : cursor.Y >= mon.rcWork.Bottom - zone;
+            ? cursor.y <= mon.rcWork.Top + zone
+            : cursor.y >= mon.rcWork.Bottom - zone;
     }
 
     private bool CursorInDockArea(Win32.POINT cursor)
     {
         var r = IntendedDockRect();
-        if (cursor.X < r.Left - 36 || cursor.X > r.Right + 36 || cursor.Y < r.Top - 36) return false;
-        return cursor.Y <= r.Bottom + 36;
+        if (cursor.x < r.Left - 36 || cursor.x > r.Right + 36 || cursor.y < r.Top - 36) return false;
+        return cursor.y <= r.Bottom + 36;
     }
 
     private void RefreshLayoutIfMonitorChanged()
     {
         // 使用 Dock 锚点位置而非鼠标位置来判断显示器变化，
         // 确保鼠标不在 Dock 所在屏幕时也能正确检测分辨率/DPI 变化
-        var pt = new Win32.POINT { X = (int)(_anchorLeft * _dpiScale), Y = (int)(_dockEdge * _dpiScale) };
+        var pt = new Win32.POINT { x = (int)(_anchorLeft * _dpiScale), y = (int)(_dockEdge * _dpiScale) };
         var mon = GetMonitorInfoOf(pt);
         double scale = _dpiScale;
         bool dockTop = _settings.DockPosition == "TopCenter";
