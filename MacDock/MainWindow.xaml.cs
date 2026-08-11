@@ -39,8 +39,8 @@ public partial class MainWindow : Window
     [DllImport("dwmapi.dll")]
     private static extern int DwmGetWindowAttribute(IntPtr hwnd, int dwAttribute, out int pvAttribute, int cbAttribute);
 
-private const int DWMWA_CLOAKED = 14;
-private const uint MONITOR_DEFAULTTONEAREST = 2;
+    private const int DWMWA_CLOAKED = 14;
+    private const uint MONITOR_DEFAULTTONEAREST = 2;
 
     private readonly SettingsService _settingsService = new();
     private readonly HotkeyService _hotkey = new();                    // F2：隐藏桌面图标
