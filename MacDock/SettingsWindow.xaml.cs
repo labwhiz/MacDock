@@ -13,7 +13,7 @@ namespace MacDock;
 
 public partial class SettingsWindow : Window
 {
-    private readonly AppSettings _work;
+    private AppSettings _work;
     private readonly SettingsService _settingsService;
     private bool _loading = true;
 
@@ -734,39 +734,8 @@ public partial class SettingsWindow : Window
 
     private void OnDefaultClick(object sender, RoutedEventArgs e)
     {
-        var def = SettingsService.Defaults();
-        _work.IconSize = def.IconSize;
-        _work.MagnifyBoost = def.MagnifyBoost;
-        _work.IconSpacing = def.IconSpacing;
-        _work.BarMinWidth = 0;
-        _work.BarMinHeight = 0;
-        _work.DockPosition = def.DockPosition;
-        _work.DockOffsetY = def.DockOffsetY;
-        _work.DockOffsetX = def.DockOffsetX;
-        _work.CornerRadius = def.CornerRadius;
-        _work.EdgeHotzoneSize = def.EdgeHotzoneSize;
-        _work.BackgroundStyle = def.BackgroundStyle;
-        _work.BackgroundColor = def.BackgroundColor;
-        _work.BackgroundOpacity = def.BackgroundOpacity;
-        _work.ShowBorder = def.ShowBorder;
-        _work.BorderColor = def.BorderColor;
-        _work.RunOnStartup = false;
-        _work.ShowOnEdge = def.ShowOnEdge;
-        _work.HotkeyEnabled = def.HotkeyEnabled;
-        _work.HotkeyModifier = def.HotkeyModifier;
-        _work.HotkeyKey = def.HotkeyKey;
-        _work.BlockHotkeyEnabled = def.BlockHotkeyEnabled;
-        _work.BlockHotkeyModifier = def.BlockHotkeyModifier;
-        _work.BlockHotkeyKey = def.BlockHotkeyKey;
-        _work.BlockShowWhenCovered = def.BlockShowWhenCovered;
-        _work.AnimationDuration = def.AnimationDuration;
-        _work.ShowFolderLabels = def.ShowFolderLabels;
-        _work.FolderLabelColor = def.FolderLabelColor;
-        _work.TaskbarLockEnabled = def.TaskbarLockEnabled;
-        _work.TaskbarLockHotkeyEnabled = def.TaskbarLockHotkeyEnabled;
-        _work.TaskbarLockHotkeyModifier = def.TaskbarLockHotkeyModifier;
-        _work.TaskbarLockHotkeyKey = def.TaskbarLockHotkeyKey;
-        _work.Items = def.Items;
+        // 整体替换为默认配置，避免逐字段赋值遗漏新字段
+        _work = SettingsService.Defaults();
         LoadFromWork();
         Save();
         SettingsChanged?.Invoke(_work);
