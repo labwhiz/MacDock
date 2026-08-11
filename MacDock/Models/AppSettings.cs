@@ -80,10 +80,6 @@ public class AppSettings
     /// <summary>快捷键主键（默认 F2）。</summary>
     public string HotkeyKey { get; set; } = "F2";
 
-    /// <summary>任务栏常驻还是自动隐藏（读取系统设置，无需持久化）。</summary>
-    [System.Text.Json.Serialization.JsonIgnore]
-    public bool TaskbarAutoHide { get; set; }
-
     public List<DockItemModel> Items { get; set; } = new();
 
     public AppSettings Clone()

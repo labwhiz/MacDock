@@ -41,7 +41,6 @@ public partial class MainWindow : Window
 
     private const int DWMWA_CLOAKED = 14;
     private const uint MONITOR_DEFAULTTONEAREST = 2;
-    private const double SlideSeconds = 0.18;
 
     private readonly SettingsService _settingsService = new();
     private readonly HotkeyService _hotkey = new();                    // F2：隐藏桌面图标
@@ -1039,26 +1038,6 @@ public partial class MainWindow : Window
         }
     }
 
-    private void LogTickState()
-    {
-        string msg;
-        if (_hwnd != IntPtr.Zero && Win32.GetWindowRect(_hwnd, out var r))
-            msg = $"state dockVisible={_dockVisible} slideY={_slideY:F1} opacity={_opacity:F2} winVis={Win32.IsWindowVisible(_hwnd)} rect={r.Left},{r.Top}-{r.Right},{r.Bottom}";
-        else
-            msg = $"state hwnd={_hwnd} no-rect";
-        Log(msg);
-        try
-        {
-            var dir = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "MacDock");
-            System.IO.Directory.CreateDirectory(dir);
-            System.IO.File.WriteAllText(System.IO.Path.Combine(dir, "state.log"), msg + "\r\n");
-        }
-        catch (Exception ex)
-        {
-            Log("state EX: " + ex.Message);
-        }
-    }
-
     private static Win32.POINT GetCursorScreenPoint()
     {
         Win32.GetCursorPos(out var pt);
@@ -1149,8 +1128,6 @@ public partial class MainWindow : Window
 
     private bool IsCovered() => IsCoveredByVisibleWindows(IntendedDockRect());
 
-    private bool IsCoveredByVisibleWindows() => IsCoveredByVisibleWindows(IntendedDockRect());
-
     private bool IsCoveredByVisibleWindows(Win32.RECT dockRect)
     {
         var list = new List<IntPtr>();
@@ -1222,12 +1199,6 @@ public partial class MainWindow : Window
 
     private double HideSlideOffset() =>
         _settings.DockPosition == "TopCenter" ? -(_winHeight + 40) : (_winHeight + 40);
-
-    private void ToggleDockVisibility()
-    {
-        if (_dockVisible) HideDock();
-        else ShowDock();
-    }
 
     private void SetClickThrough(bool clickThrough)
     {

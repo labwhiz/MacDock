@@ -9,7 +9,6 @@
         ShowInTaskbar="True"
         Background="#FFF4F4F6">
     <Window.Resources>
-        <svc:IconConverter x:Key="IconConverter"/>
         <svc:DockItemIconConverter x:Key="DockItemIconConverter"/>
         <Style TargetType="Slider">
             <Setter Property="Margin" Value="0,4,0,10"/>
