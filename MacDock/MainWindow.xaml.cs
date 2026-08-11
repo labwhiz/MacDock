@@ -1134,7 +1134,9 @@ public partial class MainWindow : Window
 
     private void RefreshLayoutIfMonitorChanged()
     {
-        var pt = GetCursorScreenPoint();
+        // 使用 Dock 锚点位置而非鼠标位置来判断显示器变化，
+        // 确保鼠标不在 Dock 所在屏幕时也能正确检测分辨率/DPI 变化
+        var pt = new Win32.POINT { X = (int)(_anchorLeft * _dpiScale), Y = (int)(_dockEdge * _dpiScale) };
         var mon = GetMonitorInfoOf(pt);
         double scale = _dpiScale;
         bool dockTop = _settings.DockPosition == "TopCenter";
