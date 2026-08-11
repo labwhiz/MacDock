@@ -18,7 +18,7 @@
                 Background="#C226262E"
                 BorderThickness="0"
                 Padding="10,10"
-                HorizontalAlignment="Stretch"
+                HorizontalAlignment="Center"
                 ClipToBounds="False"
                 AllowDrop="True"
                 DragEnter="OnDockDragEnter"

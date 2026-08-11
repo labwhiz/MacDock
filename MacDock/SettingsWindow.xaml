@@ -3,9 +3,10 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:svc="clr-namespace:MacDock.Services"
         Title="MacDock 设置"
-        Width="560" Height="720"
+        Width="780" Height="860"
+        MinWidth="640" MinHeight="640"
         WindowStartupLocation="CenterOwner"
-        ResizeMode="CanMinimize"
+        ResizeMode="CanResize"
         ShowInTaskbar="True"
         Background="#FFF4F4F6">
     <Window.Resources>
@@ -25,51 +26,84 @@
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="10">
                         <TextBlock Text="图标尺寸" FontWeight="SemiBold"/>
-                        <Slider x:Name="SldIconSize" Minimum="32" Maximum="96" TickFrequency="4" IsSnapToTickEnabled="True"/>
+                        <DockPanel Margin="0,4,0,10">
+                            <TextBox x:Name="TxtIconSize" DockPanel.Dock="Right" Width="76" Margin="8,0,0,0" VerticalContentAlignment="Center" Padding="4,2" ToolTip="直接输入数值（范围 24 ~ 128）"/>
+                            <Slider x:Name="SldIconSize" Minimum="24" Maximum="128" TickFrequency="4" IsSnapToTickEnabled="True" Margin="0"/>
+                        </DockPanel>
                         <TextBlock x:Name="LblIconSize" Foreground="#FF666666" Margin="0,0,0,10"/>
 
                         <TextBlock Text="放大强度（仅放大鼠标悬停的图标）" FontWeight="SemiBold"/>
-                        <Slider x:Name="SldBoost" Minimum="0.2" Maximum="2.0" TickFrequency="0.1"/>
+                        <DockPanel Margin="0,4,0,10">
+                            <TextBox x:Name="TxtBoost" DockPanel.Dock="Right" Width="76" Margin="8,0,0,0" VerticalContentAlignment="Center" Padding="4,2" ToolTip="直接输入数值（范围 0 ~ 2.0）"/>
+                            <Slider x:Name="SldBoost" Minimum="0" Maximum="2" TickFrequency="0.1" Margin="0"/>
+                        </DockPanel>
                         <TextBlock x:Name="LblBoost" Foreground="#FF666666" Margin="0,0,0,2"/>
                         <TextBlock Text="放大时背景栏保持不动，图标向背景外侧生长" Foreground="#FF888888" FontSize="11" Margin="0,0,0,10"/>
 
                         <TextBlock Text="背景宽度（0 = 自动贴合，像素）" FontWeight="SemiBold"/>
-                        <Slider x:Name="SldMinW" Minimum="0" Maximum="2000" TickFrequency="20" IsSnapToTickEnabled="True"/>
+                        <DockPanel Margin="0,4,0,10">
+                            <TextBox x:Name="TxtMinW" DockPanel.Dock="Right" Width="76" Margin="8,0,0,0" VerticalContentAlignment="Center" Padding="4,2" ToolTip="直接输入数值（范围 0 ~ 3000）"/>
+                            <Slider x:Name="SldMinW" Minimum="0" Maximum="3000" TickFrequency="20" IsSnapToTickEnabled="True" Margin="0"/>
+                        </DockPanel>
                         <TextBlock x:Name="LblMinW" Foreground="#FF666666" Margin="0,0,0,10"/>
 
                         <TextBlock Text="背景高度（0 = 自动贴合，像素）" FontWeight="SemiBold"/>
-                        <Slider x:Name="SldMinH" Minimum="0" Maximum="600" TickFrequency="10" IsSnapToTickEnabled="True"/>
+                        <DockPanel Margin="0,4,0,10">
+                            <TextBox x:Name="TxtMinH" DockPanel.Dock="Right" Width="76" Margin="8,0,0,0" VerticalContentAlignment="Center" Padding="4,2" ToolTip="直接输入数值（范围 0 ~ 800）"/>
+                            <Slider x:Name="SldMinH" Minimum="0" Maximum="800" TickFrequency="10" IsSnapToTickEnabled="True" Margin="0"/>
+                        </DockPanel>
                         <TextBlock x:Name="LblMinH" Foreground="#FF666666" Margin="0,0,0,10"/>
 
                         <TextBlock Text="图标间距" FontWeight="SemiBold"/>
-                        <Slider x:Name="SldSpacing" Minimum="2" Maximum="24" TickFrequency="2" IsSnapToTickEnabled="True"/>
+                        <DockPanel Margin="0,4,0,10">
+                            <TextBox x:Name="TxtSpacing" DockPanel.Dock="Right" Width="76" Margin="8,0,0,0" VerticalContentAlignment="Center" Padding="4,2" ToolTip="直接输入数值（范围 0 ~ 32）"/>
+                            <Slider x:Name="SldSpacing" Minimum="0" Maximum="32" TickFrequency="2" IsSnapToTickEnabled="True" Margin="0"/>
+                        </DockPanel>
                         <TextBlock x:Name="LblSpacing" Foreground="#FF666666" Margin="0,0,0,12"/>
 
                         <TextBlock Text="Dock 位置" FontWeight="SemiBold"/>
                         <ComboBox x:Name="CmbPosition" Margin="0,4,0,10"/>
 
                         <TextBlock Text="距屏幕边缘距离（像素）" FontWeight="SemiBold" Margin="0,4,0,0"/>
-                        <Slider x:Name="SldOffsetY" Minimum="0" Maximum="240" TickFrequency="4" IsSnapToTickEnabled="True"/>
+                        <DockPanel Margin="0,4,0,10">
+                            <TextBox x:Name="TxtOffsetY" DockPanel.Dock="Right" Width="76" Margin="8,0,0,0" VerticalContentAlignment="Center" Padding="4,2" ToolTip="直接输入数值（范围 0 ~ 600）"/>
+                            <Slider x:Name="SldOffsetY" Minimum="0" Maximum="600" TickFrequency="10" IsSnapToTickEnabled="True" Margin="0"/>
+                        </DockPanel>
                         <TextBlock x:Name="LblOffsetY" Foreground="#FF666666" Margin="0,0,0,8"/>
 
                         <TextBlock Text="水平偏移（像素，负值向左）" FontWeight="SemiBold"/>
-                        <Slider x:Name="SldOffsetX" Minimum="-240" Maximum="240" TickFrequency="4" IsSnapToTickEnabled="True"/>
+                        <DockPanel Margin="0,4,0,10">
+                            <TextBox x:Name="TxtOffsetX" DockPanel.Dock="Right" Width="76" Margin="8,0,0,0" VerticalContentAlignment="Center" Padding="4,2" ToolTip="直接输入数值（范围 -800 ~ 800）"/>
+                            <Slider x:Name="SldOffsetX" Minimum="-800" Maximum="800" TickFrequency="10" IsSnapToTickEnabled="True" Margin="0"/>
+                        </DockPanel>
                         <TextBlock x:Name="LblOffsetX" Foreground="#FF666666" Margin="0,0,0,10"/>
 
                         <TextBlock Text="背景框圆角（像素，0 为直角）" FontWeight="SemiBold"/>
-                        <Slider x:Name="SldCorner" Minimum="0" Maximum="32" TickFrequency="2" IsSnapToTickEnabled="True"/>
+                        <DockPanel Margin="0,4,0,10">
+                            <TextBox x:Name="TxtCorner" DockPanel.Dock="Right" Width="76" Margin="8,0,0,0" VerticalContentAlignment="Center" Padding="4,2" ToolTip="直接输入数值（范围 0 ~ 48）"/>
+                            <Slider x:Name="SldCorner" Minimum="0" Maximum="48" TickFrequency="2" IsSnapToTickEnabled="True" Margin="0"/>
+                        </DockPanel>
                         <TextBlock x:Name="LblCorner" Foreground="#FF666666" Margin="0,0,0,8"/>
 
                         <TextBlock Text="边缘唤出距离（像素，鼠标距屏幕边缘多近时唤出）" FontWeight="SemiBold"/>
-                        <Slider x:Name="SldHotzone" Minimum="4" Maximum="80" TickFrequency="2" IsSnapToTickEnabled="True"/>
+                        <DockPanel Margin="0,4,0,10">
+                            <TextBox x:Name="TxtHotzone" DockPanel.Dock="Right" Width="76" Margin="8,0,0,0" VerticalContentAlignment="Center" Padding="4,2" ToolTip="直接输入数值（范围 4 ~ 160）"/>
+                            <Slider x:Name="SldHotzone" Minimum="4" Maximum="160" TickFrequency="2" IsSnapToTickEnabled="True" Margin="0"/>
+                        </DockPanel>
                         <TextBlock x:Name="LblHotzone" Foreground="#FF666666" Margin="0,0,0,10"/>
 
                         <TextBlock Text="文件夹面板与图标间距（像素）" FontWeight="SemiBold"/>
-                        <Slider x:Name="SldFolderGap" Minimum="0" Maximum="120" TickFrequency="4" IsSnapToTickEnabled="True"/>
+                        <DockPanel Margin="0,4,0,10">
+                            <TextBox x:Name="TxtFolderGap" DockPanel.Dock="Right" Width="76" Margin="8,0,0,0" VerticalContentAlignment="Center" Padding="4,2" ToolTip="直接输入数值（范围 0 ~ 200）"/>
+                            <Slider x:Name="SldFolderGap" Minimum="0" Maximum="200" TickFrequency="4" IsSnapToTickEnabled="True" Margin="0"/>
+                        </DockPanel>
                         <TextBlock x:Name="LblFolderGap" Foreground="#FF666666" Margin="0,0,0,10"/>
 
                         <TextBlock Text="唤出/隐藏动画时长（秒）" FontWeight="SemiBold"/>
-                        <Slider x:Name="SldAnimDuration" Minimum="0.1" Maximum="2.0" TickFrequency="0.1"/>
+                        <DockPanel Margin="0,4,0,10">
+                            <TextBox x:Name="TxtAnimDuration" DockPanel.Dock="Right" Width="76" Margin="8,0,0,0" VerticalContentAlignment="Center" Padding="4,2" ToolTip="直接输入数值（范围 0.05 ~ 5.0）"/>
+                            <Slider x:Name="SldAnimDuration" Minimum="0.05" Maximum="5" TickFrequency="0.05" Margin="0"/>
+                        </DockPanel>
                         <TextBlock x:Name="LblAnimDuration" Foreground="#FF666666" Margin="0,0,0,10"/>
 
                         <TextBlock Text="背景样式" FontWeight="SemiBold"/>
@@ -80,7 +114,10 @@
                         <TextBlock x:Name="LblBgColor" Foreground="#FF666666" Margin="0,0,0,10"/>
 
                         <TextBlock Text="背景不透明度（毛玻璃 / 透明样式）" FontWeight="SemiBold"/>
-                        <Slider x:Name="SldBgOpacity" Minimum="0.1" Maximum="1.0" TickFrequency="0.05"/>
+                        <DockPanel Margin="0,4,0,10">
+                            <TextBox x:Name="TxtBgOpacity" DockPanel.Dock="Right" Width="76" Margin="8,0,0,0" VerticalContentAlignment="Center" Padding="4,2" ToolTip="直接输入数值（范围 0 ~ 1.0）"/>
+                            <Slider x:Name="SldBgOpacity" Minimum="0" Maximum="1" TickFrequency="0.05" Margin="0"/>
+                        </DockPanel>
                         <TextBlock x:Name="LblBgOpacity" Foreground="#FF666666" Margin="0,0,0,10"/>
 
                         <CheckBox x:Name="ChkBorder" Content="显示边框" Margin="0,4"/>
@@ -172,7 +209,7 @@
                                 <DataTemplate>
                                     <StackPanel Orientation="Horizontal">
                                         <Image Source="{Binding ., Converter={StaticResource DockItemIconConverter}}"
-                                               Width="28" Height="28" Stretch="Uniform" Margin="0,0,10,0"/>
+                                               Width="32" Height="32" Stretch="Uniform" Margin="0,0,10,0"/>
                                         <StackPanel>
                                             <StackPanel Orientation="Horizontal">
                                                 <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>

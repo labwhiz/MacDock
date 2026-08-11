@@ -60,6 +60,7 @@ public partial class MainWindow : Window
     private double _spacing = 8;
     private double _barHeight;
     private double _barWidth;
+    private double _winWidth;
     private double _winHeight;  // 窗口总高度 = 背景栏高度
     private double _dockEdge;   // 屏幕坐标（DIP）：底部=Dock 底边；顶部=Dock 顶边
     private double _anchorLeft;
@@ -287,12 +288,15 @@ public partial class MainWindow : Window
         int count = Math.Max(1, _settings.Items.Count);
         double pad = 10;
         double borderT = _settings.ShowBorder ? 1 : 0;
-        // 背景栏固定尺寸：按“放大后的图标”计算，悬停放大时图标始终在背景内，背景本身不动
+        // 背景栏按“未放大”的图标总宽计算，悬停放大时图标向背景外侧生长（窗口保留放大余量，避免图标被裁剪）
         double boost = Math.Clamp(_settings.MagnifyBoost, 0.0, 2.0);
-        double magSize = _baseSize * (1 + boost);
-        double magContentW = count * magSize + Math.Max(0, count - 1) * _spacing;
-        _barWidth = Math.Max(magContentW + 2 * (pad + borderT), _settings.BarMinWidth);
+        double baseSize = _baseSize;
+        double magSize = baseSize * (1 + boost);
+        double contentW = count * baseSize + Math.Max(0, count - 1) * _spacing;
+        _barWidth = Math.Max(contentW + 2 * (pad + borderT), _settings.BarMinWidth);
         _barHeight = Math.Max(magSize + 2 * (pad + borderT), _settings.BarMinHeight);
+        double magExtend = (magSize - baseSize) / 2.0 + _spacing / 2.0;
+        _winWidth = Math.Max(_barWidth + 2 * magExtend, 60);
         _winHeight = _barHeight;
         DockShell.Width = _barWidth;
         DockShell.Height = _barHeight;
@@ -316,18 +320,18 @@ public partial class MainWindow : Window
                 break;
             case "BottomLeft":
                 _dockEdge = workBottom - 6 - _settings.DockOffsetY;
-                _anchorLeft = workLeft + _barWidth / 2.0 + margin + _settings.DockOffsetX;
+                _anchorLeft = workLeft + _winWidth / 2.0 + margin + _settings.DockOffsetX;
                 break;
             case "BottomRight":
                 _dockEdge = workBottom - 6 - _settings.DockOffsetY;
-                _anchorLeft = workRight - _barWidth / 2.0 - margin + _settings.DockOffsetX;
+                _anchorLeft = workRight - _winWidth / 2.0 - margin + _settings.DockOffsetX;
                 break;
             default:
                 _dockEdge = workBottom - 6 - _settings.DockOffsetY;
                 _anchorLeft = (workLeft + workRight) / 2.0 + _settings.DockOffsetX;
                 break;
         }
-        Log($"metrics barW={_barWidth} barH={_barHeight} winH={_winHeight} dockEdge={_dockEdge} anchorLeft={_anchorLeft} scale={_dpiScale} items={_settings.Items.Count}");
+        Log($"metrics barW={_barWidth} barH={_barHeight} winW={_winWidth} winH={_winHeight} dockEdge={_dockEdge} anchorLeft={_anchorLeft} scale={_dpiScale} items={_settings.Items.Count}");
     }
 
     // 与 ComputeMetrics 共用同一套“工作区底边（含任务栏规避）”计算，避免两者偏差被误判为显示器变化
@@ -381,7 +385,7 @@ public partial class MainWindow : Window
 
     private void PositionWindow(bool animate)
     {
-        double w = Math.Round(_barWidth);
+        double w = Math.Round(_winWidth);
         double h = Math.Round(_winHeight);
         double left = Math.Round(_anchorLeft - w / 2.0);
         bool dockTop = _settings.DockPosition == "TopCenter";
@@ -1172,9 +1176,9 @@ public partial class MainWindow : Window
         bool dockTop = _settings.DockPosition == "TopCenter";
         double topY = dockTop ? _dockEdge : _dockEdge - _barHeight;
         var r = new Win32.RECT();
-        r.Left = (int)((_anchorLeft - _barWidth / 2.0) * scale);
+        r.Left = (int)((_anchorLeft - _winWidth / 2.0) * scale);
         r.Top = (int)(topY * scale);
-        r.Right = (int)((_anchorLeft + _barWidth / 2.0) * scale);
+        r.Right = (int)((_anchorLeft + _winWidth / 2.0) * scale);
         r.Bottom = (int)((dockTop ? _dockEdge + _barHeight : _dockEdge) * scale);
         return r;
     }

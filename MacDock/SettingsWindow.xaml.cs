@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Windows;
@@ -316,6 +317,66 @@ public partial class SettingsWindow : Window
     }
 
     private void OnResetIconClick(object sender, RoutedEventArgs e) => ApplyIconOverride(null);
+    private sealed class NumBoxBinding
+    {
+        public Slider Slider = null!;
+        public double Min;
+        public double Max;
+        public Action<double> Apply = null!;
+        public Func<double> Current = null!;
+        public string Format = "0";
+    }
+
+    private void HookNumBox(TextBox box, Slider slider, double min, double max, Action<double> apply, Func<double> current, string format)
+    {
+        box.Tag = new NumBoxBinding { Slider = slider, Min = min, Max = max, Apply = apply, Current = current, Format = format };
+        box.TextChanged += OnNumBoxTextChanged;
+        box.LostKeyboardFocus += OnNumBoxLostFocus;
+        box.PreviewKeyDown += OnNumBoxKeyDown;
+    }
+
+    private static bool TryParseNum(string text, out double value)
+        => double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value);
+
+    private void OnNumBoxTextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (_loading || sender is not TextBox tb || tb.Tag is not NumBoxBinding b) return;
+        if (TryParseNum(tb.Text, out double v))
+        {
+            v = Math.Clamp(v, b.Min, b.Max);
+            b.Apply(v);
+            if (Math.Abs(b.Slider.Value - v) > 1e-9) b.Slider.Value = v;
+            UpdateLabels();
+            SettingsChanged?.Invoke(_work);
+        }
+    }
+
+    private void OnNumBoxLostFocus(object sender, RoutedEventArgs e)
+    {
+        if (sender is not TextBox tb || tb.Tag is not NumBoxBinding b) return;
+        NormalizeNumBox(tb, b);
+    }
+
+    private void OnNumBoxKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key != System.Windows.Input.Key.Enter || sender is not TextBox tb) return;
+        if (tb.Tag is NumBoxBinding b) NormalizeNumBox(tb, b);
+        System.Windows.Input.Keyboard.ClearFocus();
+        e.Handled = true;
+    }
+
+    private void NormalizeNumBox(TextBox tb, NumBoxBinding b)
+    {
+        if (_loading) return;
+        double v = TryParseNum(tb.Text, out double p) ? p : b.Current();
+        v = Math.Clamp(v, b.Min, b.Max);
+        tb.Text = v.ToString(b.Format, CultureInfo.InvariantCulture);
+        b.Apply(v);
+        if (Math.Abs(b.Slider.Value - v) > 1e-9) b.Slider.Value = v;
+        UpdateLabels();
+        SettingsChanged?.Invoke(_work);
+    }
+
     private void HookEvents()
     {
         SldIconSize.ValueChanged += (_, _) => { if (_loading) return; _work.IconSize = (int)SldIconSize.Value; UpdateLabels(); SettingsChanged?.Invoke(_work); };
@@ -398,23 +459,47 @@ public partial class SettingsWindow : Window
             if (_loading) return;
             if (CmbTaskbarLockKey.SelectedItem is string s) { _work.TaskbarLockHotkeyKey = s; Save(); SettingsChanged?.Invoke(_work); }
         };
+        HookNumBox(TxtIconSize, SldIconSize, 24, 128, v => _work.IconSize = (int)Math.Round(v), () => _work.IconSize, "0");
+        HookNumBox(TxtBoost, SldBoost, 0, 2.0, v => _work.MagnifyBoost = Math.Round(v, 2), () => _work.MagnifyBoost, "0.##");
+        HookNumBox(TxtMinW, SldMinW, 0, 3000, v => _work.BarMinWidth = v, () => _work.BarMinWidth, "0");
+        HookNumBox(TxtMinH, SldMinH, 0, 800, v => _work.BarMinHeight = v, () => _work.BarMinHeight, "0");
+        HookNumBox(TxtSpacing, SldSpacing, 0, 32, v => _work.IconSpacing = (int)Math.Round(v), () => _work.IconSpacing, "0");
+        HookNumBox(TxtOffsetY, SldOffsetY, 0, 600, v => _work.DockOffsetY = (int)Math.Round(v), () => _work.DockOffsetY, "0");
+        HookNumBox(TxtOffsetX, SldOffsetX, -800, 800, v => _work.DockOffsetX = (int)Math.Round(v), () => _work.DockOffsetX, "0");
+        HookNumBox(TxtCorner, SldCorner, 0, 48, v => _work.CornerRadius = (int)Math.Round(v), () => _work.CornerRadius, "0");
+        HookNumBox(TxtHotzone, SldHotzone, 4, 160, v => _work.EdgeHotzoneSize = (int)Math.Round(v), () => _work.EdgeHotzoneSize, "0");
+        HookNumBox(TxtFolderGap, SldFolderGap, 0, 200, v => _work.FolderPanelGap = (int)Math.Round(v), () => _work.FolderPanelGap, "0");
+        HookNumBox(TxtAnimDuration, SldAnimDuration, 0.05, 5.0, v => _work.AnimationDuration = Math.Round(v, 2), () => _work.AnimationDuration, "0.00");
+        HookNumBox(TxtBgOpacity, SldBgOpacity, 0, 1.0, v => _work.BackgroundOpacity = Math.Round(v, 2), () => _work.BackgroundOpacity, "0.00");
         ItemList.SelectionChanged += (_, _) => UpdateButtons();
     }
 
     private void LoadFromWork()
     {
         SldIconSize.Value = _work.IconSize;
+        TxtIconSize.Text = _work.IconSize.ToString("0");
         SldBoost.Value = _work.MagnifyBoost;
+        TxtBoost.Text = _work.MagnifyBoost.ToString("0.##", CultureInfo.InvariantCulture);
         SldSpacing.Value = _work.IconSpacing;
+        TxtSpacing.Text = _work.IconSpacing.ToString("0");
         SldMinW.Value = _work.BarMinWidth;
+        TxtMinW.Text = _work.BarMinWidth.ToString("0", CultureInfo.InvariantCulture);
         SldMinH.Value = _work.BarMinHeight;
+        TxtMinH.Text = _work.BarMinHeight.ToString("0", CultureInfo.InvariantCulture);
         SldBgOpacity.Value = _work.BackgroundOpacity;
+        TxtBgOpacity.Text = _work.BackgroundOpacity.ToString("0.00", CultureInfo.InvariantCulture);
         SldOffsetY.Value = _work.DockOffsetY;
+        TxtOffsetY.Text = _work.DockOffsetY.ToString("0");
         SldOffsetX.Value = _work.DockOffsetX;
+        TxtOffsetX.Text = _work.DockOffsetX.ToString("0");
         SldCorner.Value = _work.CornerRadius;
+        TxtCorner.Text = _work.CornerRadius.ToString("0");
         SldHotzone.Value = _work.EdgeHotzoneSize;
+        TxtHotzone.Text = _work.EdgeHotzoneSize.ToString("0");
         SldFolderGap.Value = _work.FolderPanelGap;
+        TxtFolderGap.Text = _work.FolderPanelGap.ToString("0");
         SldAnimDuration.Value = _work.AnimationDuration;
+        TxtAnimDuration.Text = _work.AnimationDuration.ToString("0.00", CultureInfo.InvariantCulture);
         SelectComboByTag(CmbPosition, _work.DockPosition);
         SelectComboByTag(CmbBgStyle, _work.BackgroundStyle);
         ChkBlockShow.IsChecked = _work.BlockShowWhenCovered;
