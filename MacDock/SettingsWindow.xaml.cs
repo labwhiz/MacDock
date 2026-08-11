@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -335,6 +335,18 @@ public partial class SettingsWindow : Window
         box.PreviewKeyDown += OnNumBoxKeyDown;
     }
 
+    /// <summary>统一绑定滑块：加载期间忽略，变化时应用设置并通知（5.3）。</summary>
+    private void HookSlider(Slider slider, Action<double> apply)
+    {
+        slider.ValueChanged += (_, _) =>
+        {
+            if (_loading) return;
+            apply(slider.Value);
+            UpdateLabels();
+            SettingsChanged?.Invoke(_work);
+        };
+    }
+
     private static bool TryParseNum(string text, out double value)
         => double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value);
 
@@ -379,18 +391,18 @@ public partial class SettingsWindow : Window
 
     private void HookEvents()
     {
-        SldIconSize.ValueChanged += (_, _) => { if (_loading) return; _work.IconSize = (int)SldIconSize.Value; UpdateLabels(); SettingsChanged?.Invoke(_work); };
-        SldBoost.ValueChanged += (_, _) => { if (_loading) return; _work.MagnifyBoost = SldBoost.Value; UpdateLabels(); SettingsChanged?.Invoke(_work); };
-        SldSpacing.ValueChanged += (_, _) => { if (_loading) return; _work.IconSpacing = (int)SldSpacing.Value; UpdateLabels(); SettingsChanged?.Invoke(_work); };
-        SldMinW.ValueChanged += (_, _) => { if (_loading) return; _work.BarMinWidth = SldMinW.Value; UpdateLabels(); SettingsChanged?.Invoke(_work); };
-        SldMinH.ValueChanged += (_, _) => { if (_loading) return; _work.BarMinHeight = SldMinH.Value; UpdateLabels(); SettingsChanged?.Invoke(_work); };
-        SldBgOpacity.ValueChanged += (_, _) => { if (_loading) return; _work.BackgroundOpacity = Math.Round(SldBgOpacity.Value, 2); UpdateLabels(); SettingsChanged?.Invoke(_work); };
-        SldOffsetY.ValueChanged += (_, _) => { if (_loading) return; _work.DockOffsetY = (int)SldOffsetY.Value; UpdateLabels(); SettingsChanged?.Invoke(_work); };
-        SldOffsetX.ValueChanged += (_, _) => { if (_loading) return; _work.DockOffsetX = (int)SldOffsetX.Value; UpdateLabels(); SettingsChanged?.Invoke(_work); };
-        SldCorner.ValueChanged += (_, _) => { if (_loading) return; _work.CornerRadius = (int)SldCorner.Value; UpdateLabels(); SettingsChanged?.Invoke(_work); };
-        SldHotzone.ValueChanged += (_, _) => { if (_loading) return; _work.EdgeHotzoneSize = (int)SldHotzone.Value; UpdateLabels(); SettingsChanged?.Invoke(_work); };
-        SldFolderGap.ValueChanged += (_, _) => { if (_loading) return; _work.FolderPanelGap = (int)SldFolderGap.Value; UpdateLabels(); SettingsChanged?.Invoke(_work); };
-        SldAnimDuration.ValueChanged += (_, _) => { if (_loading) return; _work.AnimationDuration = Math.Round(SldAnimDuration.Value, 2); UpdateLabels(); SettingsChanged?.Invoke(_work); };
+        HookSlider(SldIconSize, v => _work.IconSize = (int)v);
+        HookSlider(SldBoost, v => _work.MagnifyBoost = v);
+        HookSlider(SldSpacing, v => _work.IconSpacing = (int)v);
+        HookSlider(SldMinW, v => _work.BarMinWidth = v);
+        HookSlider(SldMinH, v => _work.BarMinHeight = v);
+        HookSlider(SldBgOpacity, v => _work.BackgroundOpacity = Math.Round(v, 2));
+        HookSlider(SldOffsetY, v => _work.DockOffsetY = (int)v);
+        HookSlider(SldOffsetX, v => _work.DockOffsetX = (int)v);
+        HookSlider(SldCorner, v => _work.CornerRadius = (int)v);
+        HookSlider(SldHotzone, v => _work.EdgeHotzoneSize = (int)v);
+        HookSlider(SldFolderGap, v => _work.FolderPanelGap = (int)v);
+        HookSlider(SldAnimDuration, v => _work.AnimationDuration = Math.Round(v, 2));
         CmbPosition.SelectionChanged += (_, _) =>
         {
             if (_loading) return;
@@ -589,13 +601,6 @@ public partial class SettingsWindow : Window
         _work.BlockShowWhenCovered = newValue;
         if (ChkBlockShow.IsChecked != newValue)
             ChkBlockShow.IsChecked = newValue;
-    }
-
-    /// <summary>兼容无参调用，读取 _work 当前值同步勾选框。</summary>
-    public void RefreshBlockMode()
-    {
-        if (ChkBlockShow.IsChecked != _work.BlockShowWhenCovered)
-            ChkBlockShow.IsChecked = _work.BlockShowWhenCovered;
     }
 
     /// <summary>外部（如任务栏锁定快捷键）切换后同步 _work 与勾选框状态。</summary>

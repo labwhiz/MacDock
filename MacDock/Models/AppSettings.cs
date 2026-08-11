@@ -105,10 +105,6 @@ public class AppSettings
     /// <summary>任务栏锁定快捷键主键（默认 F2）。</summary>
     public string TaskbarLockHotkeyKey { get; set; } = "F2";
 
-    /// <summary>任务栏常驻还是自动隐藏（读取系统设置，无需持久化）。</summary>
-    [System.Text.Json.Serialization.JsonIgnore]
-    public bool TaskbarAutoHide { get; set; }
-
     public ObservableCollection<DockItemModel> Items { get; set; } = new();
 
     public AppSettings Clone()

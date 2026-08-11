@@ -6,7 +6,16 @@ $instDir = $PSScriptRoot
 $root = Split-Path -Parent $PSScriptRoot
 $proj = Join-Path $root 'MacDock\MacDock.csproj'
 $publishDir = Join-Path $root 'publish\MacDock-fd'
-$csc = 'C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe'
+# 动态查找 csc：优先 64 位、回退 32 位，避免路径硬编码在 ARM64/精简系统上失效（9.5）
+$csc = $null
+$cscCandidates = @(
+  (Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'),
+  (Join-Path $env:WINDIR 'Microsoft.NET\Framework\v4.0.30319\csc.exe')
+)
+foreach ($c in $cscCandidates) {
+  if (Test-Path -LiteralPath $c) { $csc = $c; break }
+}
+if (-not $csc) { throw '未找到 csc.exe（需要 .NET Framework 4.x 的 C# 编译器，用于编译安装器）' }
 $ico = Join-Path $root 'MacDock\Assets\app.ico'
 
 # 1) 仅关闭从工作区启动的 MacDock（不影响其他位置已安装的版本），然后发布（框架依赖，目标机需装 .NET 8 桌面运行时）

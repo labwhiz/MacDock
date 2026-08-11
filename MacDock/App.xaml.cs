@@ -19,6 +19,9 @@ public partial class App : Application
         if (!createdNew)
         {
             MessageBox.Show("MacDock 已在运行，请查看系统托盘。", "MacDock", MessageBoxButton.OK, MessageBoxImage.Information);
+            // 未持有锁：直接释放句柄，避免 OnExit 中执行多余的 ReleaseMutex 异常路径
+            _mutex.Dispose();
+            _mutex = null;
             Shutdown();
             return;
         }
@@ -39,6 +42,7 @@ public partial class App : Application
         catch (Exception ex)
         {
             Log("MainWindow ctor EX: " + ex);
+            // 构造失败后必须退出，否则 OnExplicitShutdown 模式下进程会残留
             Shutdown(1);
             return;
         }
@@ -57,7 +61,8 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
-        try { _mutex?.ReleaseMutex(); } catch (Exception) { }
+        // 进程退出时系统会自动释放互斥体，直接 Dispose 即可；
+        // 先 ReleaseMutex 再 Dispose 在异常路径下反而可能残留锁。
         _mutex?.Dispose();
         base.OnExit(e);
     }

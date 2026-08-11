@@ -1,7 +1,7 @@
 <Window x:Class="MacDock.SettingsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:svc="clr-namespace:MacDock.Services"
+        xmlns:conv="clr-namespace:MacDock.Converters"
         Title="MacDock 设置"
         Width="780" Height="860"
         MinWidth="640" MinHeight="640"
@@ -10,7 +10,7 @@
         ShowInTaskbar="True"
         Background="#FFF4F4F6">
     <Window.Resources>
-        <svc:DockItemIconConverter x:Key="DockItemIconConverter"/>
+        <conv:DockItemIconConverter x:Key="DockItemIconConverter"/>
         <Style TargetType="Slider">
             <Setter Property="Margin" Value="0,4,0,10"/>
         </Style>

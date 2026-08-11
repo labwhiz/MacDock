@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -26,6 +26,9 @@ public partial class MainWindow : Window
 
     private const int DWMWA_CLOAKED = 14;
 
+    // 与 XAML 中 DockShell.Padding="10,10" 保持一致，避免硬编码漂移（2.5/5.2）
+    private const double ShellPadding = 10;
+
     private readonly SettingsService _settingsService = new();
     private readonly HotkeyService _hotkey = new();                    // F2：隐藏桌面图标
     private readonly HotkeyService _blockHotkey = new(0x4D44); // "MD"：F3 开关“被覆盖禁止唤出”
@@ -44,9 +47,14 @@ public partial class MainWindow : Window
     private SettingsWindow? _settingsWindow;
 
     private readonly DispatcherTimer _pollTimer = new() { Interval = TimeSpan.FromMilliseconds(380) };
-    private readonly DispatcherTimer _runningTimer = new() { Interval = TimeSpan.FromMilliseconds(1800) };
+    private readonly DispatcherTimer _runningTimer = new() { Interval = TimeSpan.FromMilliseconds(3000) };
 
     private bool _renderHooked;
+    private bool _layoutApplied;
+    private DateTime _lastDisplayRefreshUtc = DateTime.MinValue;
+    private List<IntPtr>? _windowCache;
+    private DateTime _windowCacheExpiresUtc = DateTime.MinValue;
+    private static readonly TimeSpan WindowCacheTtl = TimeSpan.FromMilliseconds(1200);
     private bool _dockVisible = true;
     private bool _mouseOverDock;
     private double _slideY;
@@ -129,7 +137,8 @@ public partial class MainWindow : Window
 
     private void OnLoaded(object? sender, RoutedEventArgs e)
     {
-        RefreshLayout();
+        // OnSourceInitialized 已执行首次布局；此处仅兜底，避免启动阶段重复 RefreshLayout（6.4）
+        if (!_layoutApplied) RefreshLayout();
         ApplyTaskbarLock();
     }
 
@@ -150,14 +159,12 @@ public partial class MainWindow : Window
         try { ApplyTaskbarLock(false); } catch (Exception) { }
         _tray?.Dispose();
         try { SaveSettings(); } catch (Exception) { }
-        // 托盘应用：主窗口关闭且无其他窗口（如设置窗）时彻底退出，避免残留后台进程占用单实例锁。
-        // 排除自身（此时仍在 Windows 集合中）后计数，避免 SettingsWindow 尚未完成关闭时误判为还有窗口。
+        // 托盘应用：主窗口关闭且无其他窗口（如设置窗）时彻底退出，避免残留后台进程占用单实例锁
+        // 排除主窗口自身后计数，避免 SettingsWindow 处于 Closing 时序（尚未从 Windows 集合移除）时误判
         try
         {
-            int other = 0;
-            foreach (Window w in Application.Current.Windows)
-                if (w != this) other++;
-            if (other == 0) Application.Current.Shutdown();
+            bool hasOtherWindows = Application.Current.Windows.Cast<Window>().Any(w => w != this);
+            if (!hasOtherWindows) Application.Current.Shutdown();
         }
         catch (Exception) { }
     }
@@ -211,7 +218,7 @@ public partial class MainWindow : Window
         if (_hotkey.OnWndProc(hwnd, msg, wParam, lParam)) handled = true;
         if (_blockHotkey.OnWndProc(hwnd, msg, wParam, lParam)) handled = true;
         if (_taskbarLockHotkey.OnWndProc(hwnd, msg, wParam, lParam)) handled = true;
-        if (msg == Win32.WM_DISPLAYCHANGE) Dispatcher.BeginInvoke(new Action(RefreshLayout));
+        if (msg == Win32.WM_DISPLAYCHANGE) RefreshLayoutForDisplayChange();
         return IntPtr.Zero;
     }
 
@@ -285,6 +292,7 @@ public partial class MainWindow : Window
     private void RefreshLayout()
     {
         if (_hwnd == IntPtr.Zero) return;
+        _layoutApplied = true;
         ComputeMetrics();
         PositionWindow(animate: false);
     }
@@ -294,7 +302,7 @@ public partial class MainWindow : Window
         _baseSize = _settings.IconSize;
         _spacing = _settings.IconSpacing;
         int count = Math.Max(1, _settings.Items.Count);
-        double pad = 10;
+        double pad = ShellPadding;
         double borderT = _settings.ShowBorder ? 1 : 0;
         // 背景栏按“未放大”的图标总宽计算，悬停放大时图标向背景外侧生长（窗口保留放大余量，避免图标被裁剪）
         double boost = Math.Clamp(_settings.MagnifyBoost, 0.0, 2.0);
@@ -844,15 +852,21 @@ public partial class MainWindow : Window
     {
         var root = (Grid)sender;
         root.ReleaseMouseCapture();
-        if (_dragging)
+        // 先重置拖拽状态，避免后续同步列表/保存期间渲染或轮询读到不一致状态（2.8）
+        bool wasDragging = _dragging;
+        bool wasMoved = _clickMoved;
+        int dragIndex = _dragIndex;
+        _dragIndex = -1;
+        _dragging = false;
+        if (wasDragging)
         {
             var order = ItemsHost.Children.OfType<Grid>().Select(g => g.Tag).OfType<DockItemModel>().ToList();
             _settings.Items = new System.Collections.ObjectModel.ObservableCollection<DockItemModel>(order);
             SaveSettings();
         }
-        else if (!_clickMoved && _dragIndex >= 0 && _dragIndex < _settings.Items.Count)
+        else if (!wasMoved && dragIndex >= 0 && dragIndex < _settings.Items.Count)
         {
-            var item = _settings.Items[_dragIndex];
+            var item = _settings.Items[dragIndex];
             Log($"CLICK drag={_dragging} moved={_clickMoved} idx={_dragIndex} item={item.Name} path={item.TargetPath}");
             if (item.FolderItems != null)
             {
@@ -868,9 +882,7 @@ public partial class MainWindow : Window
                     ProcessService.ActivateOrLaunch(item);
             }
         }
-        Log($"UP drag={_dragging} moved={_clickMoved} idx={_dragIndex}");
-        _dragIndex = -1;
-        _dragging = false;
+        Log($"UP drag={wasDragging} moved={wasMoved} idx={dragIndex}");
         e.Handled = true;
     }
 
@@ -907,7 +919,7 @@ public partial class MainWindow : Window
 
     private int IndexFromX(double x)
     {
-        double pad = 10;
+        double pad = ShellPadding;
         double spacing = _spacing;
         double borderT = _settings.ShowBorder ? 1 : 0;
         int count = _itemRoots.Count;
@@ -960,7 +972,7 @@ public partial class MainWindow : Window
         var cursor = GetCursorScreenPoint();
         var local = PointFromScreen(new Point(cursor.x, cursor.y));
         double boost = Math.Clamp(_settings.MagnifyBoost, 0, 2);
-        double pad = 10;
+        double pad = ShellPadding;
         double borderT = _settings.ShowBorder ? 1 : 0;
         double spacing = _spacing;
         double baseSize = _baseSize;
@@ -981,14 +993,18 @@ public partial class MainWindow : Window
         }
 
         int hover = -1;
-        for (int i = 0; i < count; i++)
+        // 鼠标不在 Dock 附近时跳过逐项命中检测，减少每帧开销（3.2）
+        if (CursorInDockArea(cursor))
         {
-            double half = curW[i] / 2.0;
-            if (local.X >= curX[i] - half - 1 && local.X <= curX[i] + half + 1 &&
-                local.Y >= curY[i] - half - 1 && local.Y <= curY[i] + half + 1)
+            for (int i = 0; i < count; i++)
             {
-                hover = i;
-                break;
+                double half = curW[i] / 2.0;
+                if (local.X >= curX[i] - half - 1 && local.X <= curX[i] + half + 1 &&
+                    local.Y >= curY[i] - half - 1 && local.Y <= curY[i] + half + 1)
+                {
+                    hover = i;
+                    break;
+                }
             }
         }
 
@@ -1035,15 +1051,8 @@ public partial class MainWindow : Window
         foreach (var root in _itemRoots)
         {
             if (root.Tag is not DockItemModel item) continue;
-            bool running;
-            if (item.TargetPath.StartsWith("shell:", StringComparison.OrdinalIgnoreCase))
-                running = false;
-            else
-            {
-                var exeName = System.IO.Path.GetFileNameWithoutExtension(PathResolver.Resolve(item.TargetPath));
-                running = !string.IsNullOrEmpty(exeName) &&
-                          (exeName.Equals("explorer", StringComparison.OrdinalIgnoreCase) || runningSet.Contains(exeName));
-            }
+            // 统一走 ProcessService 判定逻辑，避免与 IsRunning 重复实现（2.4）
+            bool running = ProcessService.IsRunning(item.TargetPath, runningSet);
             if (running == item.IsRunning) continue;
             item.IsRunning = running;
             var dot = root.Children.OfType<Ellipse>().FirstOrDefault();
@@ -1143,12 +1152,26 @@ public partial class MainWindow : Window
 
     private bool IsCovered() => IsCoveredByVisibleWindows(IntendedDockRect());
 
+    /// <summary>缓存顶级窗口句柄列表（短 TTL），避免每次轮询都全量 EnumWindows（3.3）。</summary>
+    private List<IntPtr> GetCachedTopWindows()
+    {
+        var now = DateTime.UtcNow;
+        if (_windowCache == null || now >= _windowCacheExpiresUtc)
+        {
+            var fresh = new List<IntPtr>();
+            Win32.EnumWindows((hwnd, _) => { fresh.Add(hwnd); return true; }, IntPtr.Zero);
+            _windowCache = fresh;
+            _windowCacheExpiresUtc = now + WindowCacheTtl;
+        }
+        return _windowCache;
+    }
+
     private bool IsCoveredByVisibleWindows(Win32.RECT dockRect)
     {
-        var list = new List<IntPtr>();
-        Win32.EnumWindows((hwnd, _) => { list.Add(hwnd); return true; }, IntPtr.Zero);
+        var list = GetCachedTopWindows();
         foreach (var hwnd in list)
         {
+            if (!Win32.IsWindow(hwnd)) continue; // 缓存句柄可能已失效（窗口关闭/Explorer 重启）
             if (hwnd == _hwnd) continue;
             if (_settingsWindow != null && hwnd == _settingsWindow.Hwnd) continue;
             if (!Win32.IsWindowVisible(hwnd)) continue;
@@ -1256,12 +1279,6 @@ public partial class MainWindow : Window
             }
         }
         catch (Exception) { }
-    }
-
-    private void ToggleDockVisibility()
-    {
-        if (_dockVisible) HideDock();
-        else ShowDock();
     }
 
     private void SetClickThrough(bool clickThrough)
@@ -1394,7 +1411,16 @@ public partial class MainWindow : Window
         }
     }
 
-    private void OnDisplayChanged(object? sender, EventArgs e) => Dispatcher.BeginInvoke(new Action(RefreshLayout));
+    private void OnDisplayChanged(object? sender, EventArgs e) => Dispatcher.BeginInvoke(new Action(RefreshLayoutForDisplayChange));
+
+    /// <summary>显示器变化可能同时触发 WM_DISPLAYCHANGE 与 SystemEvents，去重后只刷新一次（6.4）。</summary>
+    private void RefreshLayoutForDisplayChange()
+    {
+        var now = DateTime.UtcNow;
+        if ((now - _lastDisplayRefreshUtc).TotalMilliseconds < 500) return;
+        _lastDisplayRefreshUtc = now;
+        RefreshLayout();
+    }
 
 
 

@@ -46,9 +46,16 @@ public class SettingsService
                 }
             }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            // 配置损坏时回退默认
+            // 配置损坏时回退默认，但先记录日志并备份损坏文件，避免用户配置无感知丢失（3.5）
+            try
+            {
+                CommonUtils.Log("Settings Load EX: " + ex);
+                if (File.Exists(_file))
+                    File.Copy(_file, _file + ".bad", true);
+            }
+            catch (Exception) { }
         }
         var fresh = new AppSettings { Items = DefaultItems() };
         return fresh;
@@ -96,11 +103,8 @@ public class SettingsService
     private static bool IsSafePath(string? path)
     {
         if (string.IsNullOrEmpty(path)) return true; // 内置文件夹占位允许空路径
-        foreach (var ch in path)
-        {
-            if (char.IsControl(ch) || ch == '"') return false;
-        }
-        return true;
+        // 收紧校验：拒绝 Windows 路径非法字符（控制字符、"、<、>、| 等）（7.3）
+        return path.IndexOfAny(Path.GetInvalidPathChars()) < 0;
     }
 
     private static bool IsSafeArguments(string arguments)

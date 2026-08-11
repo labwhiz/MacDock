@@ -8,6 +8,7 @@ namespace MacDock.Services;
 public static class CommonUtils
 {
     private const int MaxLogSize = 1 * 1024 * 1024; // 1MB
+    private static long? _logSize; // 缓存日志文件大小，避免每次写入都查文件系统（6.3）
 
     /// <summary>写入日志行到 %AppData%\MacDock\debug.log，超过 1MB 时自动轮转为 .log.old。</summary>
     public static void Log(string msg)
@@ -21,24 +22,31 @@ public static class CommonUtils
         {
             try
             {
-                // 日志轮转：超过大小限制时备份旧日志
-                if (File.Exists(logPath))
-                {
-                    var fi = new FileInfo(logPath);
-                    if (fi.Length > MaxLogSize)
-                    {
-                        try { if (File.Exists(oldPath)) File.Delete(oldPath); } catch { }
-                        try { File.Move(logPath, oldPath); } catch { }
-                    }
-                }
+                RotateIfNeeded(logPath, oldPath);
                 File.AppendAllText(logPath, line);
+                _logSize = (_logSize ?? 0) + System.Text.Encoding.UTF8.GetByteCount(line);
                 return;
             }
             catch
             {
+                _logSize = null; // 状态未知，下次重新探测
                 System.Threading.Thread.Sleep(30);
             }
         }
+    }
+
+    /// <summary>日志轮转：仅在累计大小超限时才检查文件系统（6.3）。</summary>
+    private static void RotateIfNeeded(string logPath, string oldPath)
+    {
+        long size = _logSize ?? (File.Exists(logPath) ? new FileInfo(logPath).Length : 0);
+        if (size <= MaxLogSize)
+        {
+            _logSize = size;
+            return;
+        }
+        try { if (File.Exists(oldPath)) File.Delete(oldPath); } catch { }
+        try { File.Move(logPath, oldPath); } catch { }
+        _logSize = File.Exists(logPath) ? new FileInfo(logPath).Length : 0;
     }
 
     /// <summary>解析十六进制颜色字符串（#RRGGBB / #AARRGGBB），失败返回 fallback。</summary>

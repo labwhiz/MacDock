@@ -33,12 +33,19 @@ public static class ProcessService
         return set;
     }
 
+    /// <summary>解析目标可执行文件名（shell: URI 或空路径返回 null）。</summary>
+    private static string? ResolveExeName(string targetPath)
+    {
+        if (targetPath.StartsWith("shell:", StringComparison.OrdinalIgnoreCase)) return null;
+        var exeName = Path.GetFileNameWithoutExtension(PathResolver.Resolve(targetPath));
+        return string.IsNullOrEmpty(exeName) ? null : exeName;
+    }
+
     /// <summary>判断某个 exe 名对应的进程是否在运行。</summary>
     public static bool IsRunning(string targetPath)
     {
-        if (targetPath.StartsWith("shell:", StringComparison.OrdinalIgnoreCase)) return false;
-        var exeName = Path.GetFileNameWithoutExtension(PathResolver.Resolve(targetPath));
-        if (string.IsNullOrEmpty(exeName)) return false;
+        var exeName = ResolveExeName(targetPath);
+        if (exeName == null) return false;
         if (exeName.Equals("explorer", StringComparison.OrdinalIgnoreCase)) return true; // 资源管理器常驻
         try
         {
@@ -56,6 +63,15 @@ public static class ProcessService
         {
             return false;
         }
+    }
+
+    /// <summary>批量场景：用已枚举的进程名集合判断，与 OnRunningTick 共用同一判定逻辑，避免重复实现（2.4）。</summary>
+    public static bool IsRunning(string targetPath, HashSet<string> runningExeNames)
+    {
+        var exeName = ResolveExeName(targetPath);
+        if (exeName == null) return false;
+        if (exeName.Equals("explorer", StringComparison.OrdinalIgnoreCase)) return true; // 资源管理器常驻
+        return runningExeNames.Contains(exeName);
     }
 
     /// <summary>启动应用。</summary>
@@ -96,6 +112,8 @@ public static class ProcessService
             if (!string.IsNullOrWhiteSpace(item.Arguments))
             {
                 if (!IsSafeArguments(item.Arguments)) return;
+                // 目标是命令解释器时，额外拒绝可被解释为管道/重定向/命令连接的元字符（7.1）
+                if (IsCommandInterpreter(exeName) && !IsSafeInterpreterArguments(item.Arguments)) return;
                 psi.Arguments = item.Arguments;
             }
             if (Path.IsPathRooted(target))
@@ -118,7 +136,7 @@ public static class ProcessService
         if (!value.StartsWith("shell:", StringComparison.OrdinalIgnoreCase)) return null;
         foreach (var ch in value)
         {
-            if (char.IsLetterOrDigit(ch) || ch is ':' or '_' or '-' or '.' or ' ' or '{' or '}' or '/' or '\\') continue;
+            if (char.IsLetterOrDigit(ch) || ch is ':' or '_' or '-' or '.' or ' ' or '{' or '}' or '/') continue;
             return null;
         }
         return value;
@@ -131,6 +149,23 @@ public static class ProcessService
         foreach (var ch in arguments)
         {
             if (char.IsControl(ch)) return false;
+        }
+        return true;
+    }
+
+    /// <summary>命令解释器（cmd/powershell 等）目标：额外过滤可能被解释为管道/重定向/命令连接的元字符（7.1）。</summary>
+    private static readonly HashSet<string> CommandInterpreters = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "cmd", "powershell", "pwsh", "wscript", "cscript",
+    };
+
+    private static bool IsCommandInterpreter(string exeName) => CommandInterpreters.Contains(exeName);
+
+    private static bool IsSafeInterpreterArguments(string arguments)
+    {
+        foreach (var ch in arguments)
+        {
+            if (ch is '&' or '|' or '<' or '>' or '^' or '%' or '`' or '(' or ')') return false;
         }
         return true;
     }

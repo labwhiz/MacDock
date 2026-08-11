@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Windows;
@@ -465,7 +464,7 @@ public class FolderPanelWindow : Window
         {
             try
             {
-                Process.Start(new ProcessStartInfo(entry.Path) { UseShellExecute = true });
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(entry.Path) { UseShellExecute = true });
             }
             catch (Exception) { }
         }
@@ -530,6 +529,7 @@ public class FolderPanelWindow : Window
         }
         catch (Exception ex)
         {
+            CommonUtils.Log("GetWorkAreaDip EX: " + ex);
             return new Rect(0, 0, SystemParameters.WorkArea.Width, SystemParameters.WorkArea.Height);
         }
     }

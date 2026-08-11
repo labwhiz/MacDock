@@ -11,6 +11,7 @@ public class DesktopIconsService
 {
     private readonly List<IntPtr> _listViews = new();
     private bool _hooked;
+    private bool? _lastVisible; // 最近一次设置/检测到的状态，避免多显示器部分可见时误判（2.6）
     private EnumWindowsProc? _enumWindowsProc;
     private EnumChildProc? _enumChildProc;
 
@@ -26,6 +27,13 @@ public class DesktopIconsService
     public bool AreIconsVisible()
     {
         EnsureHooked();
+        // 多显示器下各 ListView 可能状态不一致，以最近一次操作/检测结果为准，保证切换行为符合预期
+        if (_lastVisible.HasValue) return _lastVisible.Value;
+        return QueryLiveVisible();
+    }
+
+    private bool QueryLiveVisible()
+    {
         foreach (var lv in _listViews)
         {
             if (lv != IntPtr.Zero && Win32.IsWindowVisible(lv)) return true;
@@ -44,6 +52,7 @@ public class DesktopIconsService
     public void SetIconsVisible(bool visible)
     {
         EnsureHooked();
+        _lastVisible = visible;
         int cmd = visible ? Win32.SW_SHOW : Win32.SW_HIDE;
         foreach (var lv in _listViews)
         {
@@ -69,6 +78,7 @@ public class DesktopIconsService
 
             // 句柄已失效（如 Explorer 重启），重新枚举
             _listViews.Clear();
+            _lastVisible = null;
             _hooked = false;
         }
 

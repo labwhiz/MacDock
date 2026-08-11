@@ -23,10 +23,8 @@ internal static class Win32
 
     // 低级鼠标钩子
     public const int WH_MOUSE_LL = 14;
-    public const int WM_LBUTTONDOWN = 0x0201;
     public const int WM_LBUTTONDBLCLK = 0x0203;
     public const int WM_RBUTTONDOWN = 0x0204;
-    public const int WM_MOUSEMOVE = 0x0200;
 
     [StructLayout(LayoutKind.Sequential)]
     public struct MSLLHOOKSTRUCT
@@ -170,9 +168,6 @@ internal static class Win32
     public static extern bool SetForegroundWindow(IntPtr hWnd);
 
     [DllImport("user32.dll")]
-    public static extern IntPtr GetForegroundWindow();
-
-    [DllImport("user32.dll")]
     public static extern bool GetCursorPos(out POINT lpPoint);
 
     [DllImport("user32.dll")]
@@ -183,9 +178,6 @@ internal static class Win32
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     public static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);
-
-    [DllImport("user32.dll")]
-    public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 
     [DllImport("user32.dll", EntryPoint = "GetWindowLongPtr")]
     public static extern IntPtr GetWindowLongPtr(IntPtr hWnd, int nIndex);
@@ -221,9 +213,6 @@ internal static class Win32
 
     [DllImport("user32.dll")]
     public static extern uint SHAppBarMessage(uint dwMessage, ref APPBARDATA pData);
-
-    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
-    public static extern IntPtr SendMessageTimeout(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam, uint fuFlags, uint uTimeout, out IntPtr lpdwResult);
 
     // ---- Shell32 ----
     [DllImport("shell32.dll", CharSet = CharSet.Unicode)]

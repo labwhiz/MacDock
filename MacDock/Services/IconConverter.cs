@@ -1,8 +1,9 @@
 using System;
 using System.Globalization;
 using System.Windows.Data;
+using MacDock.Services;
 
-namespace MacDock.Services;
+namespace MacDock.Converters;
 
 /// <summary>Dock 项图标转换：内置文件夹显示文件夹图标，普通项显示目标图标。用于设置列表绑定。</summary>
 public class DockItemIconConverter : IValueConverter

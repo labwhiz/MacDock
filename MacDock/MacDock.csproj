@@ -12,7 +12,12 @@
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
     <AssemblyTitle>MacDock</AssemblyTitle>
     <Product>MacDock 桌面 Dock</Product>
-    <Version>1.0.0</Version>
+    <Version>1.3.1</Version>
+    <!-- 发布优化（8.1）：WPF 不支持裁剪，明确关闭；PDB 内嵌减少发布文件。
+         如需 ReadyToRun 加速启动，可显式 -p:PublishReadyToRun=true（需从 NuGet 拉取 Crossgen2）。 -->
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <PublishTrimmed>false</PublishTrimmed>
+    <DebugType>embedded</DebugType>
   </PropertyGroup>
 
 </Project>

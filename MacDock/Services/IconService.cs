@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
@@ -14,16 +15,46 @@ namespace MacDock.Services;
 public class IconService
 {
     private static readonly Dictionary<string, BitmapSource> Cache = new();
+    private static readonly LinkedList<string> CacheOrder = new(); // 最近使用在前（LRU）
 
-    /// <summary>缓存上限，超过时清空重建（BitmapSource 已 Freeze，已显示的图标不受影响）。</summary>
+    /// <summary>缓存上限，超过时淘汰最近最少使用的条目（6.2）。</summary>
     private const int MaxCacheSize = 256;
 
-    /// <summary>向缓存中添加条目，超过上限时先清空。</summary>
+    /// <summary>防御性断言：缓存读写要求位于 UI 线程（当前全部调用点均满足）（3.1）。</summary>
+    [Conditional("DEBUG")]
+    private static void AssertUiThread()
+    {
+        var app = Application.Current;
+        if (app == null) return;
+        Debug.Assert(app.Dispatcher.CheckAccess(), "IconService 缓存必须在 UI 线程访问");
+    }
+
+    /// <summary>向缓存中添加条目，超过上限时按 LRU 淘汰最近最少使用的条目。</summary>
     private static void AddToCache(string key, BitmapSource value)
     {
+        AssertUiThread();
+        if (Cache.TryGetValue(key, out _))
+        {
+            Cache[key] = value;
+            TouchCacheKey(key);
+            return;
+        }
         if (Cache.Count >= MaxCacheSize)
-            Cache.Clear();
+        {
+            while (Cache.Count >= MaxCacheSize && CacheOrder.Last is LinkedListNode<string> last)
+            {
+                Cache.Remove(last.Value);
+                CacheOrder.RemoveLast();
+            }
+        }
         Cache[key] = value;
+        CacheOrder.AddFirst(key);
+    }
+
+    private static void TouchCacheKey(string key)
+    {
+        if (CacheOrder.Remove(key))
+            CacheOrder.AddFirst(key);
     }
 
     private static readonly BitmapSource Fallback = CreateFallback();
@@ -36,9 +67,10 @@ public class IconService
 
     public static BitmapSource GetIcon(string targetPath, int size)
     {
+        AssertUiThread();
         var resolved = PathResolver.Resolve(targetPath);
         var key = resolved + "@" + size;
-        if (Cache.TryGetValue(key, out var cached)) return cached;
+        if (Cache.TryGetValue(key, out var cached)) { TouchCacheKey(key); return cached; }
 
         // 文件夹：直接返回自绘的圆角文件夹图标（无描边、透明背景），
         // 系统文件夹图标在部分尺寸下会带描边/外框，不符合要求。
@@ -69,6 +101,7 @@ public class IconService
     /// <summary>获取 Dock 项图标：内置文件夹优先使用自定义图标（预设 / 图片 / 软件图标），否则用默认文件夹图标。</summary>
     public static BitmapSource GetItemIcon(MacDock.Models.DockItemModel item, int size)
     {
+        AssertUiThread();
         if (item.FolderItems != null)
         {
             if (!string.IsNullOrWhiteSpace(item.IconOverride))
@@ -78,7 +111,7 @@ public class IconService
                 {
                     var key = ov.Substring(7).Trim();
                     var cacheKey = "preset:" + key.ToLowerInvariant() + "@" + size;
-                    if (Cache.TryGetValue(cacheKey, out var cachedPreset)) return cachedPreset;
+                    if (Cache.TryGetValue(cacheKey, out var cachedPreset)) { TouchCacheKey(cacheKey); return cachedPreset; }
                     var bmp = IconPresets.Draw(key, size);
                     AddToCache(cacheKey, bmp);
                     return bmp;

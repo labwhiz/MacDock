@@ -14,7 +14,7 @@ namespace MacDockSetup
     {
         public const string Name = "MacDock";
         public const string DisplayName = "MacDock 桌面 Dock";
-        public const string Version = "1.0.0";
+        public const string Version = "1.3.1";
         public const string Publisher = "MacDock";
         public const string UninstallSubKey = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\MacDock";
         public const string RunValueName = "MacDock";
@@ -196,7 +196,7 @@ namespace MacDockSetup
                         foreach (string name in key.GetValueNames())
                         {
                             string v = (key.GetValue(name) ?? "").ToString();
-                            if (v.StartsWith("8.")) return true;
+                            if (IsDesktopRuntimeCompatible(v)) return true;
                         }
                     }
                 }
@@ -208,13 +208,23 @@ namespace MacDockSetup
                         foreach (string name in key.GetValueNames())
                         {
                             string v = (key.GetValue(name) ?? "").ToString();
-                            if (v.StartsWith("8.")) return true;
+                            if (IsDesktopRuntimeCompatible(v)) return true;
                         }
                     }
                 }
             }
             catch { }
             return false;
+        }
+
+        /// <summary>判断已安装的桌面运行时主版本是否 >= 8（兼容未来的 9.x/10.x，9.4）。</summary>
+        private static bool IsDesktopRuntimeCompatible(string version)
+        {
+            if (string.IsNullOrWhiteSpace(version)) return false;
+            int dot = version.IndexOf('.');
+            string majorText = dot >= 0 ? version.Substring(0, dot) : version;
+            int major;
+            return int.TryParse(majorText, out major) && major >= 8;
         }
 
         private static void StopMacDock(string installDir)
@@ -250,13 +260,15 @@ namespace MacDockSetup
 
         private static void WriteFileWithRetry(string path, byte[] data)
         {
+            Exception last = null;
             for (int attempt = 0; attempt < 5; attempt++)
             {
                 try { File.WriteAllBytes(path, data); return; }
-                catch (IOException) { Thread.Sleep(300); }
-                catch (UnauthorizedAccessException) { Thread.Sleep(300); }
+                catch (IOException ex) { last = ex; Thread.Sleep(300); }
+                catch (UnauthorizedAccessException ex) { last = ex; Thread.Sleep(300); }
             }
-            File.WriteAllBytes(path, data);
+            // 重试耗尽后抛出带上下文的异常，由上层统一处理，避免无保护的最后一次写入（9.2）
+            throw new IOException("写入文件失败（多次重试后）：" + path, last);
         }
 
         private static void CreateDesktopShortcut(string installDir)
