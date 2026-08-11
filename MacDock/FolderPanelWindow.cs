@@ -240,18 +240,8 @@ public class FolderPanelWindow : Window
         bool changed = false;
         foreach (var raw in paths)
         {
-            var path = PathResolver.Normalize(raw);
-            if (string.IsNullOrEmpty(path)) continue;
-            if (_folderItems.Any(i => string.Equals(i.TargetPath, path, StringComparison.OrdinalIgnoreCase))) continue;
-            string name = Directory.Exists(path)
-                ? System.IO.Path.GetFileName(path.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar))
-                : System.IO.Path.GetFileNameWithoutExtension(path);
-            _folderItems.Add(new DockItemModel
-            {
-                Name = string.IsNullOrEmpty(name) ? path : name,
-                TargetPath = path,
-            });
-            changed = true;
+            if (PathResolver.TryAddPath(_folderItems, raw))
+                changed = true;
         }
         if (changed)
         {

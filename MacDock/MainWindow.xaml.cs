@@ -1412,18 +1412,8 @@ public partial class MainWindow : Window
         bool changed = false;
         foreach (var raw in paths)
         {
-            var path = PathResolver.Normalize(raw);
-            if (string.IsNullOrEmpty(path)) continue;
-            if (folder.FolderItems.Any(i => string.Equals(i.TargetPath, path, StringComparison.OrdinalIgnoreCase))) continue;
-            string name = System.IO.Directory.Exists(path)
-                ? System.IO.Path.GetFileName(path.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar))
-                : System.IO.Path.GetFileNameWithoutExtension(path);
-            folder.FolderItems.Add(new DockItemModel
-            {
-                Name = string.IsNullOrEmpty(name) ? path : name,
-                TargetPath = path,
-            });
-            changed = true;
+            if (PathResolver.TryAddPath(folder.FolderItems, raw))
+                changed = true;
         }
         if (changed)
         {
