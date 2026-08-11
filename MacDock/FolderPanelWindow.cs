@@ -492,8 +492,8 @@ public class FolderPanelWindow : Window
         {
             var pt = new Win32.POINT
             {
-                X = (int)(_anchorX * _dpiScale),
-                Y = (int)(_iconTopY * _dpiScale),
+                x = (int)(_anchorX * _dpiScale),
+                y = (int)(_iconTopY * _dpiScale),
             };
             IntPtr mon = Win32.MonitorFromPoint(pt, 2); // MONITOR_DEFAULTTONEAREST
             var info = new Win32.MONITORINFO { cbSize = System.Runtime.InteropServices.Marshal.SizeOf<Win32.MONITORINFO>() };

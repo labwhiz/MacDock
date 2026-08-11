@@ -77,8 +77,10 @@ internal static class Win32
     [StructLayout(LayoutKind.Sequential)]
     public struct POINT
     {
-        public int X;
-        public int Y;
+        /// <summary>physical-pixel X (lowercase to distinguish from WPF Point.X DIP)</summary>
+        public int x;
+        /// <summary>physical-pixel Y (lowercase to distinguish from WPF Point.Y DIP)</summary>
+        public int y;
     }
 
     [StructLayout(LayoutKind.Sequential)]
