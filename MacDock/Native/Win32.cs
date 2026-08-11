@@ -11,6 +11,7 @@ internal static class Win32
     public const int SW_RESTORE = 9;
     public const int WM_HOTKEY = 0x0312;
     public const int WM_DISPLAYCHANGE = 0x007E;
+    public const uint MONITOR_DEFAULTTONEAREST = 2;
     public const int GW_HWNDNEXT = 2;
     public const int GW_HWNDPREV = 3;
     public const uint WS_EX_TOOLWINDOW = 0x00000080;
@@ -85,8 +86,10 @@ internal static class Win32
     [StructLayout(LayoutKind.Sequential)]
     public struct POINT
     {
-        public int X;
-        public int Y;
+        /// <summary>物理像素 X 坐标（小写以区分 WPF Point.X 的 DIP 坐标）。</summary>
+        public int x;
+        /// <summary>物理像素 Y 坐标（小写以区分 WPF Point.Y 的 DIP 坐标）。</summary>
+        public int y;
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -110,7 +113,7 @@ internal static class Win32
             return w * h;
         }
 
-        public bool Contains(POINT p) => p.X >= Left && p.X < Right && p.Y >= Top && p.Y < Bottom;
+        public bool Contains(POINT p) => p.x >= Left && p.x < Right && p.y >= Top && p.y < Bottom;
 
         public override string ToString() => $"{Left},{Top} - {Right},{Bottom}";
     }

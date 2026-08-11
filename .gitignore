@@ -432,6 +432,10 @@ FodyWeavers.xsd
 .claude/
 .dotnet-home/
 installer/*.exe
-promo/images/
-promo/pages/
+promo/
 REVIEW.md
+# === local tooling & WorkBuddy metadata (do NOT commit) ===
+.workbuddy/
+sync-main.ps1
+cleanup-branches.ps1
+fork-pr-cleanup.zip

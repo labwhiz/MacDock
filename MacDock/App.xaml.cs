@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using System.Windows;
+using MacDock.Services;
 
 namespace MacDock;
 
@@ -51,24 +52,7 @@ public partial class App : Application
         }
     }
 
-    private static void Log(string msg)
-    {
-        var line = $"{DateTime.Now:HH:mm:ss.fff} [app] {msg}\r\n";
-        for (int attempt = 0; attempt < 3; attempt++)
-        {
-            try
-            {
-                var dir = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "MacDock");
-                System.IO.Directory.CreateDirectory(dir);
-                System.IO.File.AppendAllText(System.IO.Path.Combine(dir, "debug.log"), line);
-                return;
-            }
-            catch
-            {
-                System.Threading.Thread.Sleep(30);
-            }
-        }
-    }
+    private static void Log(string msg) => CommonUtils.Log("[app] " + msg);
 
     protected override void OnExit(ExitEventArgs e)
     {

@@ -323,12 +323,14 @@ namespace MacDockSetup
         {
             string mode = null;
             string headlessDir = null;
+            bool wantShortcut = false;
             foreach (string a in args)
             {
                 string low = a.ToLowerInvariant();
                 if (low == "/install" || low == "-install" || low == "--install") mode = "install";
                 else if (low == "/uninstall" || low == "-uninstall" || low == "--uninstall") mode = "uninstall";
-                else if (mode != null && headlessDir == null) headlessDir = a;
+                else if (low == "/shortcut" || low == "-shortcut" || low == "--shortcut") wantShortcut = true;
+                else if (mode != null && headlessDir == null && !low.StartsWith("/") && !low.StartsWith("-")) headlessDir = a;
             }
 
             if (mode == "install")
@@ -336,7 +338,7 @@ namespace MacDockSetup
                 string dir = string.IsNullOrWhiteSpace(headlessDir) ? Installer.DefaultInstallDir() : headlessDir;
                 string error;
                 bool noReg = Environment.GetEnvironmentVariable("MACDOCK_SETUP_NOREG") == "1";
-                bool ok = Installer.Install(dir, false, out error, null, !noReg);
+                bool ok = Installer.Install(dir, wantShortcut, out error, null, !noReg);
                 Report("install " + dir + " -> " + (ok ? "OK" : "FAIL: " + error));
                 return ok ? 0 : 1;
             }

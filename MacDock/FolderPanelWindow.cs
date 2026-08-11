@@ -116,7 +116,7 @@ public class FolderPanelWindow : Window
 
     private FrameworkElement BuildContent()
     {
-        var color = ParseHex(_settings.BackgroundColor, Color.FromRgb(0x26, 0x26, 0x2E));
+        var color = CommonUtils.ParseHexColor(_settings.BackgroundColor, Color.FromRgb(0x26, 0x26, 0x2E));
         byte alpha = _settings.BackgroundStyle switch
         {
             "Solid" => (byte)255,
@@ -130,7 +130,7 @@ public class FolderPanelWindow : Window
             Padding = new Thickness(12),
             BorderThickness = _settings.ShowBorder ? new Thickness(1) : new Thickness(0),
             Background = new SolidColorBrush(Color.FromArgb(alpha, color.R, color.G, color.B)),
-            BorderBrush = new SolidColorBrush(ParseHex(_settings.BorderColor, Color.FromArgb(0x55, 0xFF, 0xFF, 0xFF))),
+            BorderBrush = new SolidColorBrush(CommonUtils.ParseHexColor(_settings.BorderColor, Color.FromArgb(0x55, 0xFF, 0xFF, 0xFF))),
         };
 
         if (IsBuiltinFolder)
@@ -310,7 +310,7 @@ public class FolderPanelWindow : Window
 
         var img = new Image
         {
-            Source = IconService.GetIcon(entry.Path, IconExtractSize(iconSize)),
+            Source = IconService.GetIcon(entry.Path, CommonUtils.IconExtractSize(iconSize)),
             Width = iconSize,
             Height = iconSize,
             Stretch = Stretch.Uniform,
@@ -445,9 +445,6 @@ public class FolderPanelWindow : Window
         SafeClose();
     }
 
-    private static int IconExtractSize(double displaySize) =>
-        Math.Max(32, (int)(Math.Round(displaySize * 2 / 16.0) * 16));
-
     private double MaxPanelHeight()
     {
         double gap = Math.Max(0, _settings.FolderPanelGap);
@@ -492,10 +489,10 @@ public class FolderPanelWindow : Window
         {
             var pt = new Win32.POINT
             {
-                X = (int)(_anchorX * _dpiScale),
-                Y = (int)(_iconTopY * _dpiScale),
+                x = (int)(_anchorX * _dpiScale),
+                y = (int)(_iconTopY * _dpiScale),
             };
-            IntPtr mon = Win32.MonitorFromPoint(pt, 2); // MONITOR_DEFAULTTONEAREST
+            IntPtr mon = Win32.MonitorFromPoint(pt, Win32.MONITOR_DEFAULTTONEAREST);
             var info = new Win32.MONITORINFO { cbSize = System.Runtime.InteropServices.Marshal.SizeOf<Win32.MONITORINFO>() };
             Win32.GetMonitorInfo(mon, ref info);
             return new Rect(
@@ -510,14 +507,4 @@ public class FolderPanelWindow : Window
         }
     }
 
-    private static Color ParseHex(string? hex, Color fallback)
-    {
-        try
-        {
-            if (!string.IsNullOrWhiteSpace(hex))
-                return (Color)ColorConverter.ConvertFromString(hex);
-        }
-        catch (Exception) { }
-        return fallback;
-    }
 }
