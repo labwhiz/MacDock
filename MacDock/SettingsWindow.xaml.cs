@@ -587,6 +587,7 @@ public partial class SettingsWindow : Window
         _work.BlockHotkeyEnabled = def.BlockHotkeyEnabled;
         _work.BlockHotkeyModifier = def.BlockHotkeyModifier;
         _work.BlockHotkeyKey = def.BlockHotkeyKey;
+        _work.BlockShowWhenCovered = def.BlockShowWhenCovered;
         _work.Items = def.Items;
         LoadFromWork();
         Save();
