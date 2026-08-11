@@ -57,7 +57,9 @@ internal static class Win32
 
     public const uint ABM_GETSTATE = 0x00000004;
     public const uint ABM_GETTASKBARPOS = 0x00000005;
+    public const uint ABM_SETSTATE = 0x0000000A;
     public const uint ABS_AUTOHIDE = 0x0000001;
+    public const uint ABS_ALWAYSONTOP = 0x0000002;
     public const uint ABE_BOTTOM = 3;
 
     // SHGetFileInfo flags

@@ -8,6 +8,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using MacDock.Models;
 using MacDock.Native;
 using MacDock.Services;
@@ -162,7 +163,8 @@ public class FolderPanelWindow : Window
 
         int iconSize = Math.Max(28, Math.Min(44, (int)Math.Round(_settings.IconSize * 0.65)));
         double itemW = iconSize + 12;
-        double itemH = iconSize + 26;
+        // 显示名称时预留两行文本高度（修复长名称显示不完整）；隐藏名称时更紧凑
+        double itemH = _settings.ShowFolderLabels ? iconSize + 44 : iconSize + 12;
 
         _panelItemW = itemW;
         _panelItemH = itemH;
@@ -324,14 +326,23 @@ public class FolderPanelWindow : Window
         {
             Text = entry.Name,
             FontSize = 11,
-            Foreground = new SolidColorBrush(Color.FromRgb(0xE8, 0xE8, 0xEE)),
+            Foreground = new SolidColorBrush(CommonUtils.ParseHexColor(_settings.FolderLabelColor, Color.FromRgb(0xE8, 0xE8, 0xEE))),
+            TextWrapping = TextWrapping.Wrap,
             TextTrimming = TextTrimming.CharacterEllipsis,
             TextAlignment = TextAlignment.Center,
             HorizontalAlignment = HorizontalAlignment.Center,
             MaxWidth = itemW - 4,
+            MaxHeight = 32,
             Margin = new Thickness(0, 2, 0, 0),
             IsHitTestVisible = false,
         };
+        if (!_settings.ShowFolderLabels) label.Visibility = Visibility.Collapsed;
+
+        // 悬停放大动效（与 Dock 栏一致的体验）
+        var scale = new ScaleTransform(1, 1);
+        img.RenderTransform = scale;
+        img.RenderTransformOrigin = new Point(0.5, 0.5);
+        border.ToolTip = entry.Name;
 
         Grid.SetRow(img, 0);
         Grid.SetRow(label, 1);
@@ -339,8 +350,16 @@ public class FolderPanelWindow : Window
         grid.Children.Add(label);
         border.Child = grid;
 
-        border.MouseEnter += (_, _) => border.Background = new SolidColorBrush(Color.FromArgb(0x30, 0xFF, 0xFF, 0xFF));
-        border.MouseLeave += (_, _) => border.Background = Brushes.Transparent;
+        border.MouseEnter += (_, _) =>
+        {
+            border.Background = new SolidColorBrush(Color.FromArgb(0x30, 0xFF, 0xFF, 0xFF));
+            AnimateItemScale(scale, 1.18);
+        };
+        border.MouseLeave += (_, _) =>
+        {
+            border.Background = Brushes.Transparent;
+            AnimateItemScale(scale, 1.0);
+        };
         border.MouseLeftButtonDown += (_, e) => OnPanelItemMouseDown(border, entry, e);
         border.MouseMove += (_, e) => OnPanelItemMouseMove(border, entry, e);
         border.MouseLeftButtonUp += (_, e) => OnPanelItemMouseUp(border, entry, e);
@@ -353,6 +372,14 @@ public class FolderPanelWindow : Window
             border.ContextMenu = menu;
         }
         return border;
+    }
+
+    private static void AnimateItemScale(ScaleTransform scale, double target)
+    {
+        var anim = new DoubleAnimation(target, TimeSpan.FromMilliseconds(130));
+        anim.EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut };
+        scale.BeginAnimation(ScaleTransform.ScaleXProperty, anim);
+        scale.BeginAnimation(ScaleTransform.ScaleYProperty, anim);
     }
 
     /// <summary>内置文件夹面板内拖拽排序：按下时记录拖拽项。</summary>

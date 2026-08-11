@@ -29,6 +29,7 @@ public partial class MainWindow : Window
     private readonly SettingsService _settingsService = new();
     private readonly HotkeyService _hotkey = new();                    // F2：隐藏桌面图标
     private readonly HotkeyService _blockHotkey = new(0x4D44); // "MD"：F3 开关“被覆盖禁止唤出”
+    private readonly HotkeyService _taskbarLockHotkey = new(0x4D45); // "ME"：Shift+F2 开关“任务栏锁定”
     private readonly DesktopIconsService _desktopIcons = new();
 
     private AppSettings _settings = null!;
@@ -125,7 +126,11 @@ public partial class MainWindow : Window
         DockShell.Child = host;
     }
 
-    private void OnLoaded(object? sender, RoutedEventArgs e) => RefreshLayout();
+    private void OnLoaded(object? sender, RoutedEventArgs e)
+    {
+        RefreshLayout();
+        ApplyTaskbarLock();
+    }
 
     private void OnClosing(object? sender, System.ComponentModel.CancelEventArgs e)
     {
@@ -140,8 +145,12 @@ public partial class MainWindow : Window
         }
         _hotkey.Dispose();
         _blockHotkey.Dispose();
+        _taskbarLockHotkey.Dispose();
+        try { ApplyTaskbarLock(false); } catch (Exception) { }
         _tray?.Dispose();
         try { SaveSettings(); } catch (Exception) { }
+        // 托盘应用：主窗口关闭且无其他窗口（如设置窗）时彻底退出，避免残留后台进程占用单实例锁
+        try { if (Application.Current.Windows.Count <= 1) Application.Current.Shutdown(); } catch (Exception) { }
     }
 
     // ================= 窗口初始化 =================
@@ -192,6 +201,7 @@ public partial class MainWindow : Window
     {
         if (_hotkey.OnWndProc(hwnd, msg, wParam, lParam)) handled = true;
         if (_blockHotkey.OnWndProc(hwnd, msg, wParam, lParam)) handled = true;
+        if (_taskbarLockHotkey.OnWndProc(hwnd, msg, wParam, lParam)) handled = true;
         if (msg == Win32.WM_DISPLAYCHANGE) Dispatcher.BeginInvoke(new Action(RefreshLayout));
         return IntPtr.Zero;
     }
@@ -202,6 +212,7 @@ public partial class MainWindow : Window
         // 重复订阅会让一次按键触发多次切换（隐藏→显示），快捷键看起来完全无效。
         _hotkey.HotkeyPressed -= OnHotkeyPressed;
         _blockHotkey.HotkeyPressed -= OnBlockHotkeyPressed;
+        _taskbarLockHotkey.HotkeyPressed -= OnTaskbarLockHotkeyPressed;
 
         // 窗口句柄未就绪时不注册，避免把热键注册到线程消息队列而收不到 WM_HOTKEY。
         if (_hwnd == IntPtr.Zero) return;
@@ -225,6 +236,16 @@ public partial class MainWindow : Window
         {
             _blockHotkey.Unregister();
         }
+
+        if (_settings.TaskbarLockHotkeyEnabled)
+        {
+            _taskbarLockHotkey.Register(_hwnd, _settings.TaskbarLockHotkeyModifier, _settings.TaskbarLockHotkeyKey);
+            _taskbarLockHotkey.HotkeyPressed += OnTaskbarLockHotkeyPressed;
+        }
+        else
+        {
+            _taskbarLockHotkey.Unregister();
+        }
     }
 
     private void OnBlockHotkeyPressed()
@@ -239,6 +260,15 @@ public partial class MainWindow : Window
     {
         var nowVisible = _desktopIcons.ToggleDesktopIcons();
         ShowToast(nowVisible ? "桌面图标已显示" : "桌面图标已隐藏");
+    }
+
+    private void OnTaskbarLockHotkeyPressed()
+    {
+        _settings.TaskbarLockEnabled = !_settings.TaskbarLockEnabled;
+        SaveSettings();
+        ApplyTaskbarLock();
+        _settingsWindow?.RefreshTaskbarLock(_settings.TaskbarLockEnabled);
+        ShowToast(_settings.TaskbarLockEnabled ? "已锁定任务栏：系统任务栏无法从边缘唤出" : "已解锁任务栏：系统任务栏可正常使用");
     }
 
     // ================= 布局 =================
@@ -303,6 +333,7 @@ public partial class MainWindow : Window
     // 与 ComputeMetrics 共用同一套“工作区底边（含任务栏规避）”计算，避免两者偏差被误判为显示器变化
     private double ComputeWorkBottomPx(Win32.MONITORINFO mon, bool dockTop)
     {
+        if (!dockTop && _settings.TaskbarLockEnabled) return mon.rcMonitor.Bottom;
         if (dockTop) return mon.rcWork.Bottom;
         double monitorBottomPx = mon.rcMonitor.Bottom;
         double bottomPx = mon.rcWork.Bottom;
@@ -386,6 +417,7 @@ public partial class MainWindow : Window
         ApplyMagnifyAnchor();
         UpdateStartupEntry();
         RegisterHotkey();
+        ApplyTaskbarLock();
     }
 
     private void RebuildItems()
@@ -597,7 +629,7 @@ public partial class MainWindow : Window
 
     private void OnDockMenuToggleDesktop(object sender, RoutedEventArgs e) => OnHotkeyPressed();
 
-    private void OnDockMenuExit(object sender, RoutedEventArgs e) => Close();
+    private void OnDockMenuExit(object sender, RoutedEventArgs e) => Application.Current.Shutdown();
 
     private void AddDockItems(IEnumerable<string> paths)
     {
@@ -965,13 +997,16 @@ public partial class MainWindow : Window
     private void UpdateSlide()
     {
         if (!_dockVisible) _slideTargetY = HideSlideOffset();
+        // 动画时长：按设置换算每帧插值系数（约 60fps 下衰减到 0.1%）
+        double duration = Math.Clamp(_settings.AnimationDuration, 0.05, 5.0);
+        double k = 1 - Math.Pow(0.001, 1.0 / (duration * 60.0));
         if (Math.Abs(_slideY - _slideTargetY) > 0.05)
-            _slideY += (_slideTargetY - _slideY) * 0.25;
+            _slideY += (_slideTargetY - _slideY) * k;
         else
             _slideY = _slideTargetY;
 
         double targetOpacity = _dockVisible ? 1 : 0;
-        _opacity += (targetOpacity - _opacity) * 0.25;
+        _opacity += (targetOpacity - _opacity) * k;
         if (Math.Abs(_opacity - targetOpacity) < 0.01) _opacity = targetOpacity;
 
         if (_slideY != 0 || _opacity != Opacity)
@@ -1044,6 +1079,7 @@ public partial class MainWindow : Window
     {
         if (_quitting) return;
         RefreshLayoutIfMonitorChanged();
+        if (_settings.TaskbarLockEnabled) EnforceTaskbarLock();
         // 被窗口遮挡时自动隐藏固定开启（不再提供关闭选项）。
         var cursor = GetCursorScreenPoint();
         bool overDock = _mouseOverDock || CursorInDockArea(cursor);
@@ -1189,6 +1225,49 @@ public partial class MainWindow : Window
     private double HideSlideOffset() =>
         _settings.DockPosition == "TopCenter" ? -(_winHeight + 40) : (_winHeight + 40);
 
+    // ---------- 任务栏锁定 ----------
+
+    private static List<IntPtr> FindTaskbarWindows()
+    {
+        var list = new List<IntPtr>();
+        IntPtr h = Win32.FindWindow("Shell_TrayWnd", null);
+        if (h != IntPtr.Zero) list.Add(h);
+        IntPtr h2 = IntPtr.Zero;
+        while ((h2 = Win32.FindWindowEx(IntPtr.Zero, h2, "Shell_SecondaryTrayWnd", null)) != IntPtr.Zero)
+            list.Add(h2);
+        return list;
+    }
+
+    /// <summary>应用任务栏锁定：锁定时隐藏系统任务栏，解锁时恢复显示。</summary>
+    private void ApplyTaskbarLock(bool? forceLock = null)
+    {
+        bool lockOn = forceLock ?? _settings.TaskbarLockEnabled;
+        try
+        {
+            foreach (var hwnd in FindTaskbarWindows())
+                Win32.ShowWindow(hwnd, lockOn ? Win32.SW_HIDE : Win32.SW_SHOW);
+            Log(lockOn ? "TASKBAR locked" : "TASKBAR unlocked");
+        }
+        catch (Exception ex)
+        {
+            Log("TASKBAR lock EX: " + ex.Message);
+        }
+    }
+
+    /// <summary>锁定期间周期性压制：Explorer 可能重新显示任务栏，发现后立即隐藏。</summary>
+    private void EnforceTaskbarLock()
+    {
+        try
+        {
+            foreach (var hwnd in FindTaskbarWindows())
+            {
+                if (Win32.IsWindowVisible(hwnd))
+                    Win32.ShowWindow(hwnd, Win32.SW_HIDE);
+            }
+        }
+        catch (Exception) { }
+    }
+
     private void ToggleDockVisibility()
     {
         if (_dockVisible) HideDock();
@@ -1226,7 +1305,7 @@ public partial class MainWindow : Window
         menu.Items.Add("显示 / 隐藏桌面图标 (F2)", null, (_, _) => OnHotkeyPressed());
         menu.Items.Add("设置...", null, (_, _) => OpenSettings());
         menu.Items.Add(new Wf.ToolStripSeparator());
-        menu.Items.Add("退出", null, (_, _) => Close());
+        menu.Items.Add("退出", null, (_, _) => Application.Current.Shutdown());
         _tray.ContextMenuStrip = menu;
         _tray.DoubleClick += (_, _) => OpenSettings();
     }

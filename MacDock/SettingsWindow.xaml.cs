@@ -29,6 +29,12 @@ public partial class SettingsWindow : Window
         "#FF4A90D9", "#FFFFB84A", "#99D9E8FF",
     };
 
+    private static readonly string[] FolderLabelColors =
+    {
+        "#E8E8EE", "#FFFFFF", "#C8C8D0", "#FFFFB84A",
+        "#FF4A90D9", "#FF8A8A", "#FF8AC1", "#FFB48A",
+    };
+
     private static readonly string[] HotkeyKeys = BuildHotkeyKeys();
 
     private static string[] BuildHotkeyKeys()
@@ -76,16 +82,24 @@ public partial class SettingsWindow : Window
         CmbBlockModifier.Items.Add("Shift");
         CmbBlockModifier.Items.Add("Win");
 
+        CmbTaskbarLockModifier.Items.Add("None");
+        CmbTaskbarLockModifier.Items.Add("Ctrl");
+        CmbTaskbarLockModifier.Items.Add("Alt");
+        CmbTaskbarLockModifier.Items.Add("Shift");
+        CmbTaskbarLockModifier.Items.Add("Win");
+
         foreach (var k in HotkeyKeys)
         {
             CmbHotkeyKey.Items.Add(k);
             CmbBlockKey.Items.Add(k);
+            CmbTaskbarLockKey.Items.Add(k);
         }
 
         PopulatePositionCombo();
         PopulateStyleCombo();
         BuildColorSwatches();
         BuildBorderSwatches();
+        BuildFolderLabelSwatches();
         BuildPresetIcons();
 
         LoadFromWork();
@@ -176,6 +190,41 @@ public partial class SettingsWindow : Window
     {
         foreach (Button b in BorderColorSwatches.Children)
             b.BorderBrush = string.Equals((string)b.Tag, _work.BorderColor, StringComparison.OrdinalIgnoreCase) ? Brushes.Gold : Brushes.White;
+    }
+
+    private void BuildFolderLabelSwatches()
+    {
+        foreach (var hex in FolderLabelColors)
+        {
+            var color = (Color)ColorConverter.ConvertFromString(hex);
+            var btn = new Button
+            {
+                Width = 30,
+                Height = 30,
+                Margin = new Thickness(0, 0, 8, 0),
+                Padding = new Thickness(0),
+                Background = new SolidColorBrush(color),
+                BorderBrush = Brushes.White,
+                BorderThickness = new Thickness(2),
+                Tag = hex,
+                ToolTip = hex,
+            };
+            btn.Click += (_, _) =>
+            {
+                _work.FolderLabelColor = (string)btn.Tag;
+                RefreshFolderLabelSwatchSelection();
+                UpdateLabels();
+                Save();
+                SettingsChanged?.Invoke(_work);
+            };
+            FolderLabelColorSwatches.Children.Add(btn);
+        }
+    }
+
+    private void RefreshFolderLabelSwatchSelection()
+    {
+        foreach (Button b in FolderLabelColorSwatches.Children)
+            b.BorderBrush = string.Equals((string)b.Tag, _work.FolderLabelColor, StringComparison.OrdinalIgnoreCase) ? Brushes.Gold : Brushes.White;
     }
 
     /// <summary>在“内置文件夹图标样式”区域生成预设图标按钮。</summary>
@@ -280,6 +329,7 @@ public partial class SettingsWindow : Window
         SldCorner.ValueChanged += (_, _) => { if (_loading) return; _work.CornerRadius = (int)SldCorner.Value; UpdateLabels(); SettingsChanged?.Invoke(_work); };
         SldHotzone.ValueChanged += (_, _) => { if (_loading) return; _work.EdgeHotzoneSize = (int)SldHotzone.Value; UpdateLabels(); SettingsChanged?.Invoke(_work); };
         SldFolderGap.ValueChanged += (_, _) => { if (_loading) return; _work.FolderPanelGap = (int)SldFolderGap.Value; UpdateLabels(); SettingsChanged?.Invoke(_work); };
+        SldAnimDuration.ValueChanged += (_, _) => { if (_loading) return; _work.AnimationDuration = Math.Round(SldAnimDuration.Value, 2); UpdateLabels(); SettingsChanged?.Invoke(_work); };
         CmbPosition.SelectionChanged += (_, _) =>
         {
             if (_loading) return;
@@ -332,6 +382,22 @@ public partial class SettingsWindow : Window
             if (_loading) return;
             if (CmbBlockKey.SelectedItem is string s) { _work.BlockHotkeyKey = s; Save(); SettingsChanged?.Invoke(_work); }
         };
+        ChkShowFolderLabels.Checked += (_, _) => { if (_loading) return; _work.ShowFolderLabels = true; Save(); SettingsChanged?.Invoke(_work); };
+        ChkShowFolderLabels.Unchecked += (_, _) => { if (_loading) return; _work.ShowFolderLabels = false; Save(); SettingsChanged?.Invoke(_work); };
+        ChkTaskbarLock.Checked += (_, _) => { if (_loading) return; _work.TaskbarLockEnabled = true; Save(); SettingsChanged?.Invoke(_work); };
+        ChkTaskbarLock.Unchecked += (_, _) => { if (_loading) return; _work.TaskbarLockEnabled = false; Save(); SettingsChanged?.Invoke(_work); };
+        ChkTaskbarLockHotkey.Checked += (_, _) => { if (_loading) return; _work.TaskbarLockHotkeyEnabled = true; Save(); SettingsChanged?.Invoke(_work); };
+        ChkTaskbarLockHotkey.Unchecked += (_, _) => { if (_loading) return; _work.TaskbarLockHotkeyEnabled = false; Save(); SettingsChanged?.Invoke(_work); };
+        CmbTaskbarLockModifier.SelectionChanged += (_, _) =>
+        {
+            if (_loading) return;
+            if (CmbTaskbarLockModifier.SelectedItem is string s) { _work.TaskbarLockHotkeyModifier = s; Save(); SettingsChanged?.Invoke(_work); }
+        };
+        CmbTaskbarLockKey.SelectionChanged += (_, _) =>
+        {
+            if (_loading) return;
+            if (CmbTaskbarLockKey.SelectedItem is string s) { _work.TaskbarLockHotkeyKey = s; Save(); SettingsChanged?.Invoke(_work); }
+        };
         ItemList.SelectionChanged += (_, _) => UpdateButtons();
     }
 
@@ -348,6 +414,7 @@ public partial class SettingsWindow : Window
         SldCorner.Value = _work.CornerRadius;
         SldHotzone.Value = _work.EdgeHotzoneSize;
         SldFolderGap.Value = _work.FolderPanelGap;
+        SldAnimDuration.Value = _work.AnimationDuration;
         SelectComboByTag(CmbPosition, _work.DockPosition);
         SelectComboByTag(CmbBgStyle, _work.BackgroundStyle);
         ChkBlockShow.IsChecked = _work.BlockShowWhenCovered;
@@ -361,6 +428,12 @@ public partial class SettingsWindow : Window
         CmbBlockModifier.SelectedItem = _work.BlockHotkeyModifier;
         SelectKeyCombo(CmbHotkeyKey, _work.HotkeyKey);
         SelectKeyCombo(CmbBlockKey, _work.BlockHotkeyKey);
+        ChkShowFolderLabels.IsChecked = _work.ShowFolderLabels;
+        ChkTaskbarLock.IsChecked = _work.TaskbarLockEnabled;
+        ChkTaskbarLockHotkey.IsChecked = _work.TaskbarLockHotkeyEnabled;
+        CmbTaskbarLockModifier.SelectedItem = _work.TaskbarLockHotkeyModifier;
+        SelectKeyCombo(CmbTaskbarLockKey, _work.TaskbarLockHotkeyKey);
+        RefreshFolderLabelSwatchSelection();
         RefreshSwatchSelection();
         ReloadItemList();
         UpdateLabels();
@@ -414,7 +487,9 @@ public partial class SettingsWindow : Window
         LblCorner.Text = $"{_work.CornerRadius} px";
         LblHotzone.Text = $"{_work.EdgeHotzoneSize} px";
         LblFolderGap.Text = $"{_work.FolderPanelGap} px";
+        LblAnimDuration.Text = $"{_work.AnimationDuration:0.0} 秒";
         LblBorderColor.Text = _work.BorderColor;
+        LblFolderLabelColor.Text = _work.FolderLabelColor;
     }
 
     private void ReloadItemList()
@@ -436,6 +511,14 @@ public partial class SettingsWindow : Window
     {
         if (ChkBlockShow.IsChecked != _work.BlockShowWhenCovered)
             ChkBlockShow.IsChecked = _work.BlockShowWhenCovered;
+    }
+
+    /// <summary>外部（如任务栏锁定快捷键）切换后同步 _work 与勾选框状态。</summary>
+    public void RefreshTaskbarLock(bool newValue)
+    {
+        _work.TaskbarLockEnabled = newValue;
+        if (ChkTaskbarLock.IsChecked != newValue)
+            ChkTaskbarLock.IsChecked = newValue;
     }
 
     private void UpdateButtons()
@@ -591,6 +674,13 @@ public partial class SettingsWindow : Window
         _work.BlockHotkeyModifier = def.BlockHotkeyModifier;
         _work.BlockHotkeyKey = def.BlockHotkeyKey;
         _work.BlockShowWhenCovered = def.BlockShowWhenCovered;
+        _work.AnimationDuration = def.AnimationDuration;
+        _work.ShowFolderLabels = def.ShowFolderLabels;
+        _work.FolderLabelColor = def.FolderLabelColor;
+        _work.TaskbarLockEnabled = def.TaskbarLockEnabled;
+        _work.TaskbarLockHotkeyEnabled = def.TaskbarLockHotkeyEnabled;
+        _work.TaskbarLockHotkeyModifier = def.TaskbarLockHotkeyModifier;
+        _work.TaskbarLockHotkeyKey = def.TaskbarLockHotkeyKey;
         _work.Items = def.Items;
         LoadFromWork();
         Save();

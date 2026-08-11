@@ -84,6 +84,27 @@ public class AppSettings
     /// <summary>快捷键主键（默认 F2）。</summary>
     public string HotkeyKey { get; set; } = "F2";
 
+    /// <summary>Dock 唤出/隐藏动画时长（秒）。</summary>
+    public double AnimationDuration { get; set; } = 0.5;
+
+    /// <summary>内置文件夹面板内是否显示图标名称。</summary>
+    public bool ShowFolderLabels { get; set; } = true;
+
+    /// <summary>内置文件夹面板图标名称颜色（#RRGGBB）。</summary>
+    public string FolderLabelColor { get; set; } = "#E8E8EE";
+
+    /// <summary>是否锁定任务栏（锁定后系统原生任务栏无法从边缘唤出）。</summary>
+    public bool TaskbarLockEnabled { get; set; } = false;
+
+    /// <summary>是否启用任务栏锁定快捷键。</summary>
+    public bool TaskbarLockHotkeyEnabled { get; set; } = true;
+
+    /// <summary>任务栏锁定快捷键修饰键（None / Ctrl / Alt / Shift / Win）。</summary>
+    public string TaskbarLockHotkeyModifier { get; set; } = "Shift";
+
+    /// <summary>任务栏锁定快捷键主键（默认 F2）。</summary>
+    public string TaskbarLockHotkeyKey { get; set; } = "F2";
+
     /// <summary>任务栏常驻还是自动隐藏（读取系统设置，无需持久化）。</summary>
     [System.Text.Json.Serialization.JsonIgnore]
     public bool TaskbarAutoHide { get; set; }

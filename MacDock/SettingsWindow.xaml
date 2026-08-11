@@ -69,6 +69,10 @@
                         <Slider x:Name="SldFolderGap" Minimum="0" Maximum="120" TickFrequency="4" IsSnapToTickEnabled="True"/>
                         <TextBlock x:Name="LblFolderGap" Foreground="#FF666666" Margin="0,0,0,10"/>
 
+                        <TextBlock Text="唤出/隐藏动画时长（秒）" FontWeight="SemiBold"/>
+                        <Slider x:Name="SldAnimDuration" Minimum="0.1" Maximum="2.0" TickFrequency="0.1"/>
+                        <TextBlock x:Name="LblAnimDuration" Foreground="#FF666666" Margin="0,0,0,10"/>
+
                         <TextBlock Text="背景样式" FontWeight="SemiBold"/>
                         <ComboBox x:Name="CmbBgStyle" Margin="0,4,0,12"/>
 
@@ -106,7 +110,16 @@
                                 <ComboBox x:Name="CmbBlockKey" Width="90" Margin="6,0,0,0" VerticalAlignment="Center"/>
                             </StackPanel>
                             <TextBlock Text="开关「被覆盖时禁止唤出 Dock」快捷键" Foreground="#FF888888" Margin="0,4,0,0"/>
+                            <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                <CheckBox x:Name="ChkTaskbarLockHotkey" Content="启用" VerticalAlignment="Center"/>
+                                <ComboBox x:Name="CmbTaskbarLockModifier" Width="90" Margin="10,0,0,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="+" VerticalAlignment="Center" Margin="8,0,0,0" FontWeight="SemiBold"/>
+                                <ComboBox x:Name="CmbTaskbarLockKey" Width="90" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <TextBlock Text="开关「锁定任务栏」快捷键（默认 Shift+F2）" Foreground="#FF888888" Margin="0,4,0,0"/>
                         </StackPanel>
+                        <CheckBox x:Name="ChkTaskbarLock" Content="锁定任务栏（锁定后系统原生任务栏无法从屏幕边缘唤出）" Margin="0,10,4,4"/>
+                        <TextBlock Text="勾选后隐藏系统任务栏，仅通过 MacDock 唤出；取消勾选或退出 MacDock 自动恢复" Foreground="#FF888888" FontSize="11" Margin="0,0,0,4"/>
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>
@@ -128,6 +141,14 @@
                                 <Button x:Name="BtnAdd" Content="添加文件..." Click="OnAddClick"/>
                                 <Button x:Name="BtnAddFolder" Content="添加文件夹（内置）..." Click="OnAddFolderClick" Margin="0,0,0,0"/>
                             </WrapPanel>
+                        </StackPanel>
+                    </GroupBox>
+                    <GroupBox DockPanel.Dock="Top" Header="内置文件夹面板" Margin="0,0,0,10" Padding="6">
+                        <StackPanel Margin="6">
+                            <CheckBox x:Name="ChkShowFolderLabels" Content="显示内置文件夹内图标的名称" Margin="0,4"/>
+                            <TextBlock Text="名称字体颜色" FontWeight="SemiBold" Margin="0,10,0,0"/>
+                            <WrapPanel x:Name="FolderLabelColorSwatches" Margin="0,6,0,6"/>
+                            <TextBlock x:Name="LblFolderLabelColor" Foreground="#FF666666" Margin="0,0,0,4"/>
                         </StackPanel>
                     </GroupBox>
                     <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="0,10,0,0">
