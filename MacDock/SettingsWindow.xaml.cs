@@ -41,6 +41,15 @@ public partial class SettingsWindow : Window
         list.Add("Tab");
         list.Add("Home");
         list.Add("End");
+        list.Add("Enter");
+        list.Add("ESC");
+        list.Add("Delete");
+        list.Add("PgUp");
+        list.Add("PgDn");
+        list.Add("Left");
+        list.Add("Right");
+        list.Add("Up");
+        list.Add("Down");
         return list.ToArray();
     }
 

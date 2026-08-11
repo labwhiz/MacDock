@@ -361,7 +361,8 @@ public partial class MainWindow : Window
                 if (onThisMonitor && atBottom)
                 {
                     int trayH = mon.rcMonitor.Bottom - mon.rcWork.Bottom;
-                    if (trayH <= 0 || trayH > 120)
+                    int maxTrayH = (int)(120 * _dpiScale);
+                    if (trayH <= 0 || trayH > maxTrayH)
                     {
                         var barData = new Win32.APPBARDATA
                         {
@@ -372,7 +373,7 @@ public partial class MainWindow : Window
                         Win32.SHAppBarMessage(Win32.ABM_GETTASKBARPOS, ref barData);
                         trayH = barData.rc.Height;
                     }
-                    if (trayH <= 0 || trayH > 120) trayH = 48;
+                    if (trayH <= 0 || trayH > maxTrayH) trayH = (int)(48 * _dpiScale);
                     bottomPx = monitorBottomPx - trayH;
                 }
             }
@@ -831,7 +832,8 @@ public partial class MainWindow : Window
         if (_dragging && _settings.Items.Count > 1)
         {
             int target = IndexFromX(pos.X);
-            if (target >= 0 && target < ItemsHost.Children.Count && target != _dragIndex)
+            if (target >= 0 && target < ItemsHost.Children.Count && target != _dragIndex
+                && _dragIndex >= 0 && _dragIndex < ItemsHost.Children.Count)
             {
                 var el = ItemsHost.Children[_dragIndex];
                 ItemsHost.Children.RemoveAt(_dragIndex);
