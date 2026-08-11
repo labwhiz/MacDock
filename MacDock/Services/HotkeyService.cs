@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using MacDock.Native;
 
 namespace MacDock.Services;
@@ -21,15 +21,17 @@ public class HotkeyService : IDisposable
     public void Register(IntPtr hwnd, string modifier, string key)
     {
         Unregister();
-        _hwnd = hwnd;
         uint flags = ModifierToFlags(modifier) | Win32.MOD_NOREPEAT;
-        if (!Win32.RegisterHotKey(hwnd, _hotkeyId, flags, KeyToVk(key)))
+        if (Win32.RegisterHotKey(hwnd, _hotkeyId, flags, KeyToVk(key)))
         {
-            IsRegistered = false;
+            _hwnd = hwnd;
+            IsRegistered = true;
         }
         else
         {
-            IsRegistered = true;
+            // 注册失败时保持 _hwnd 为零，确保状态一致
+            _hwnd = IntPtr.Zero;
+            IsRegistered = false;
         }
     }
 
