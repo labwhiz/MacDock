@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -218,19 +218,27 @@ namespace MacDockSetup
         {
             try
             {
-                foreach (Process p in Process.GetProcessesByName("MacDock"))
+                Process[] procs = Process.GetProcessesByName("MacDock");
+                try
                 {
-                    try
+                    foreach (Process p in procs)
                     {
-                        string exePath = p.MainModule != null ? p.MainModule.FileName : null;
-                        if (!string.IsNullOrEmpty(exePath) &&
-                            string.Equals(Path.GetDirectoryName(exePath), installDir, StringComparison.OrdinalIgnoreCase))
+                        try
                         {
-                            try { p.Kill(); } catch { }
-                            p.WaitForExit(3000);
+                            string exePath = p.MainModule != null ? p.MainModule.FileName : null;
+                            if (!string.IsNullOrEmpty(exePath) &&
+                                string.Equals(Path.GetDirectoryName(exePath), installDir, StringComparison.OrdinalIgnoreCase))
+                            {
+                                try { p.Kill(); } catch { }
+                                p.WaitForExit(3000);
+                            }
                         }
+                        catch { }
                     }
-                    catch { }
+                }
+                finally
+                {
+                    foreach (Process p in procs) p.Dispose();
                 }
             }
             catch { }
