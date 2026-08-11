@@ -311,15 +311,17 @@ if (trayH <= 0 || trayH > 120) trayH = 48;  // ← 48px 硬编码
 
 ## 五、💀 死代码
 
-### D1. `GlassHelper` 整个类完全未使用
+### D1. `GlassHelper` 整个类完全未使用 ✅ 已清理
 
 **文件**: `MacDock/Native/Win32.cs`（第 272–354 行）
 
 `GlassHelper` 类包含 `ApplyAcrylic` 和 `ApplyHostBackdrop` 两个公开方法，以及 `ACCENT_POLICY`、`WINDOWCOMPOSITIONATTRIBDATA` 等私有结构和 P/Invoke。`MainWindow.ApplyBackground` 的注释明确说明"不再调用 DWM 特效 / SetWindowRgn"，全部改由 WPF 分层渲染。这个类是历史遗留，约 80 行代码完全无用。
 
+> **修复状态**：已删除整个 `GlassHelper` 类（约 80 行）。
+
 ---
 
-### D2. `MainWindow` 中的三个未调用方法
+### D2. `MainWindow` 中的三个未调用方法 ✅ 已清理
 
 | 方法 | 位置 | 说明 |
 |------|------|------|
@@ -327,9 +329,11 @@ if (trayH <= 0 || trayH > 120) trayH = 48;  // ← 48px 硬编码
 | `ToggleDockVisibility()` | 第 1224 行 | 定义了显隐切换，但从未被调用（显示/隐藏走的是 `OnPoll` → `HideDock`/`ShowDock`） |
 | `IsCoveredByVisibleWindows()`（无参数版） | 第 1150 行 | 重载版本，实际只调用了带 `dockRect` 参数的版本 |
 
+> **修复状态**：已删除 `LogTickState()`、`ToggleDockVisibility()`、`IsCoveredByVisibleWindows()`（无参数版）三个方法。
+
 ---
 
-### D3. `Win32` 中大量未使用的常量和 P/Invoke 声明
+### D3. `Win32` 中大量未使用的常量和 P/Invoke 声明 ✅ 已清理
 
 | 声明 | 位置 | 说明 |
 |------|------|------|
@@ -350,9 +354,11 @@ if (trayH <= 0 || trayH > 120) trayH = 48;  // ← 48px 硬编码
 | `DwmSetWindowAttribute()` | 第 264 行 | 从未调用 |
 | `DWMWA_WINDOW_CORNER_PREFERENCE`, `DWMWCP_ROUND` | 第 268–269 行 | 从未使用 |
 
+> **修复状态**：已删除全部 16 个未使用的常量和 P/Invoke 声明。
+
 ---
 
-### D4. 其他死代码
+### D4. 其他死代码 ✅ 已清理
 
 | 声明 | 文件 | 说明 |
 |------|------|------|
@@ -360,6 +366,8 @@ if (trayH <= 0 || trayH > 120) trayH = 48;  // ← 48px 硬编码
 | `AppSettings.TaskbarAutoHide` | `AppSettings.cs` 第 85 行 | 标注 `[JsonIgnore]`，从未被读写 |
 | `DockItemModel.Id` | `DockItemModel.cs` 第 9 行 | 每次构造生成 GUID，但从未用于查找/比较 |
 | `IconConverter` 类 | `IconConverter.cs` 第 9–24 行 | XAML 中声明了资源 `IconConverter`，但绑定中只用了 `DockItemIconConverter`，`IconConverter` 类本身和 XAML 资源声明均多余 |
+
+> **修复状态**：已删除 `SlideSeconds` 常量、`AppSettings.TaskbarAutoHide` 属性、`DockItemModel.Id` 属性、`IconConverter` 类及 `SettingsWindow.xaml` 中对应的 XAML 资源声明。
 
 ---
 
