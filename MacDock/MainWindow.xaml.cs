@@ -276,7 +276,7 @@ public partial class MainWindow : Window
     {
         _settings.BlockShowWhenCovered = !_settings.BlockShowWhenCovered;
         SaveSettings();
-        _settingsWindow?.RefreshBlockMode();
+        _settingsWindow?.RefreshBlockMode(_settings.BlockShowWhenCovered);
         ShowToast(_settings.BlockShowWhenCovered ? "已开启：被覆盖时无法唤出 Dock" : "已关闭：被覆盖时仍可从边缘唤出 Dock");
     }
 
