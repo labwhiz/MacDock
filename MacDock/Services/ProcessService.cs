@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -18,7 +18,15 @@ public static class ProcessService
         if (exeName.Equals("explorer", StringComparison.OrdinalIgnoreCase)) return true; // 资源管理器常驻
         try
         {
-            return Process.GetProcessesByName(exeName).Length > 0;
+            var procs = Process.GetProcessesByName(exeName);
+            try
+            {
+                return procs.Length > 0;
+            }
+            finally
+            {
+                foreach (var p in procs) p.Dispose();
+            }
         }
         catch
         {
@@ -88,9 +96,10 @@ public static class ProcessService
 
         if (!item.TargetPath.StartsWith("shell:", StringComparison.OrdinalIgnoreCase))
         {
+            Process[] procs = null;
             try
             {
-                var procs = Process.GetProcessesByName(exeName);
+                procs = Process.GetProcessesByName(exeName);
                 // 优先找有主窗口的
                 foreach (var p in procs.OrderByDescending(p => p.MainWindowHandle != IntPtr.Zero))
                 {
@@ -111,6 +120,13 @@ public static class ProcessService
             catch
             {
                 // fall through to launch
+            }
+            finally
+            {
+                if (procs != null)
+                {
+                    foreach (var p in procs) p.Dispose();
+                }
             }
         }
         Launch(item);

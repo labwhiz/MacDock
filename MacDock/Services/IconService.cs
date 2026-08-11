@@ -15,6 +15,17 @@ public class IconService
 {
     private static readonly Dictionary<string, BitmapSource> Cache = new();
 
+    /// <summary>缓存上限，超过时清空重建（BitmapSource 已 Freeze，已显示的图标不受影响）。</summary>
+    private const int MaxCacheSize = 256;
+
+    /// <summary>向缓存中添加条目，超过上限时先清空。</summary>
+    private static void AddToCache(string key, BitmapSource value)
+    {
+        if (Cache.Count >= MaxCacheSize)
+            Cache.Clear();
+        Cache[key] = value;
+    }
+
     private static readonly BitmapSource Fallback = CreateFallback();
 
     public static BitmapSource GetIcon(string targetPath, int size)
@@ -28,7 +39,7 @@ public class IconService
         if (Directory.Exists(resolved))
         {
             var folderIcon = GetFolderIcon(size);
-            Cache[key] = folderIcon;
+            AddToCache(key, folderIcon);
             return folderIcon;
         }
 
@@ -45,7 +56,7 @@ public class IconService
         }
 
         icon ??= Fallback;
-        Cache[key] = icon;
+        AddToCache(key, icon);
         return icon;
     }
 
@@ -63,7 +74,7 @@ public class IconService
                     var cacheKey = "preset:" + key.ToLowerInvariant() + "@" + size;
                     if (Cache.TryGetValue(cacheKey, out var cachedPreset)) return cachedPreset;
                     var bmp = IconPresets.Draw(key, size);
-                    Cache[cacheKey] = bmp;
+                    AddToCache(cacheKey, bmp);
                     return bmp;
                 }
                 var path = PathResolver.Resolve(ov);
@@ -71,7 +82,7 @@ public class IconService
                 if (img != null)
                 {
                     var cacheKey = "custom:" + path + "@" + size;
-                    Cache[cacheKey] = img;
+                    AddToCache(cacheKey, img);
                     return img;
                 }
                 if (File.Exists(path) || Directory.Exists(path))

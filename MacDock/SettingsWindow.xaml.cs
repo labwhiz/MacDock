@@ -14,6 +14,7 @@ public partial class SettingsWindow : Window
 {
     private readonly AppSettings _work;
     private readonly SettingsService _settingsService;
+    private bool _loading = true;
 
     private static readonly string[] PresetColors =
     {
@@ -80,6 +81,7 @@ public partial class SettingsWindow : Window
 
         LoadFromWork();
         HookEvents();
+        _loading = false;
     }
 
     private void PopulatePositionCombo()
@@ -258,19 +260,20 @@ public partial class SettingsWindow : Window
     private void OnResetIconClick(object sender, RoutedEventArgs e) => ApplyIconOverride(null);
     private void HookEvents()
     {
-        SldIconSize.ValueChanged += (_, _) => { _work.IconSize = (int)SldIconSize.Value; UpdateLabels(); SettingsChanged?.Invoke(_work); };
-        SldBoost.ValueChanged += (_, _) => { _work.MagnifyBoost = SldBoost.Value; UpdateLabels(); SettingsChanged?.Invoke(_work); };
-        SldSpacing.ValueChanged += (_, _) => { _work.IconSpacing = (int)SldSpacing.Value; UpdateLabels(); SettingsChanged?.Invoke(_work); };
-        SldMinW.ValueChanged += (_, _) => { _work.BarMinWidth = SldMinW.Value; UpdateLabels(); SettingsChanged?.Invoke(_work); };
-        SldMinH.ValueChanged += (_, _) => { _work.BarMinHeight = SldMinH.Value; UpdateLabels(); SettingsChanged?.Invoke(_work); };
-        SldBgOpacity.ValueChanged += (_, _) => { _work.BackgroundOpacity = Math.Round(SldBgOpacity.Value, 2); UpdateLabels(); SettingsChanged?.Invoke(_work); };
-        SldOffsetY.ValueChanged += (_, _) => { _work.DockOffsetY = (int)SldOffsetY.Value; UpdateLabels(); SettingsChanged?.Invoke(_work); };
-        SldOffsetX.ValueChanged += (_, _) => { _work.DockOffsetX = (int)SldOffsetX.Value; UpdateLabels(); SettingsChanged?.Invoke(_work); };
-        SldCorner.ValueChanged += (_, _) => { _work.CornerRadius = (int)SldCorner.Value; UpdateLabels(); SettingsChanged?.Invoke(_work); };
-        SldHotzone.ValueChanged += (_, _) => { _work.EdgeHotzoneSize = (int)SldHotzone.Value; UpdateLabels(); SettingsChanged?.Invoke(_work); };
-        SldFolderGap.ValueChanged += (_, _) => { _work.FolderPanelGap = (int)SldFolderGap.Value; UpdateLabels(); SettingsChanged?.Invoke(_work); };
+        SldIconSize.ValueChanged += (_, _) => { if (_loading) return; _work.IconSize = (int)SldIconSize.Value; UpdateLabels(); SettingsChanged?.Invoke(_work); };
+        SldBoost.ValueChanged += (_, _) => { if (_loading) return; _work.MagnifyBoost = SldBoost.Value; UpdateLabels(); SettingsChanged?.Invoke(_work); };
+        SldSpacing.ValueChanged += (_, _) => { if (_loading) return; _work.IconSpacing = (int)SldSpacing.Value; UpdateLabels(); SettingsChanged?.Invoke(_work); };
+        SldMinW.ValueChanged += (_, _) => { if (_loading) return; _work.BarMinWidth = SldMinW.Value; UpdateLabels(); SettingsChanged?.Invoke(_work); };
+        SldMinH.ValueChanged += (_, _) => { if (_loading) return; _work.BarMinHeight = SldMinH.Value; UpdateLabels(); SettingsChanged?.Invoke(_work); };
+        SldBgOpacity.ValueChanged += (_, _) => { if (_loading) return; _work.BackgroundOpacity = Math.Round(SldBgOpacity.Value, 2); UpdateLabels(); SettingsChanged?.Invoke(_work); };
+        SldOffsetY.ValueChanged += (_, _) => { if (_loading) return; _work.DockOffsetY = (int)SldOffsetY.Value; UpdateLabels(); SettingsChanged?.Invoke(_work); };
+        SldOffsetX.ValueChanged += (_, _) => { if (_loading) return; _work.DockOffsetX = (int)SldOffsetX.Value; UpdateLabels(); SettingsChanged?.Invoke(_work); };
+        SldCorner.ValueChanged += (_, _) => { if (_loading) return; _work.CornerRadius = (int)SldCorner.Value; UpdateLabels(); SettingsChanged?.Invoke(_work); };
+        SldHotzone.ValueChanged += (_, _) => { if (_loading) return; _work.EdgeHotzoneSize = (int)SldHotzone.Value; UpdateLabels(); SettingsChanged?.Invoke(_work); };
+        SldFolderGap.ValueChanged += (_, _) => { if (_loading) return; _work.FolderPanelGap = (int)SldFolderGap.Value; UpdateLabels(); SettingsChanged?.Invoke(_work); };
         CmbPosition.SelectionChanged += (_, _) =>
         {
+            if (_loading) return;
             if (CmbPosition.SelectedItem is ComboBoxItem cbi && cbi.Tag is string tag && !string.Equals(tag, _work.DockPosition, StringComparison.Ordinal))
             {
                 _work.DockPosition = tag;
@@ -280,6 +283,7 @@ public partial class SettingsWindow : Window
         };
         CmbBgStyle.SelectionChanged += (_, _) =>
         {
+            if (_loading) return;
             if (CmbBgStyle.SelectedItem is ComboBoxItem cbi && cbi.Tag is string tag && !string.Equals(tag, _work.BackgroundStyle, StringComparison.Ordinal))
             {
                 _work.BackgroundStyle = tag;
@@ -287,32 +291,36 @@ public partial class SettingsWindow : Window
                 SettingsChanged?.Invoke(_work);
             }
         };
-        ChkBlockShow.Checked += (_, _) => { _work.BlockShowWhenCovered = true; Save(); SettingsChanged?.Invoke(_work); };
-        ChkBlockShow.Unchecked += (_, _) => { _work.BlockShowWhenCovered = false; Save(); SettingsChanged?.Invoke(_work); };
-        ChkEdgeShow.Checked += (_, _) => { _work.ShowOnEdge = true; Save(); SettingsChanged?.Invoke(_work); };
-        ChkEdgeShow.Unchecked += (_, _) => { _work.ShowOnEdge = false; Save(); SettingsChanged?.Invoke(_work); };
-        ChkBorder.Checked += (_, _) => { _work.ShowBorder = true; Save(); SettingsChanged?.Invoke(_work); };
-        ChkBorder.Unchecked += (_, _) => { _work.ShowBorder = false; Save(); SettingsChanged?.Invoke(_work); };
-        ChkStartup.Checked += (_, _) => { _work.RunOnStartup = true; Save(); SettingsChanged?.Invoke(_work); };
-        ChkStartup.Unchecked += (_, _) => { _work.RunOnStartup = false; Save(); SettingsChanged?.Invoke(_work); };
-        ChkHotkey.Checked += (_, _) => { _work.HotkeyEnabled = true; Save(); SettingsChanged?.Invoke(_work); };
-        ChkBlockHotkey.Checked += (_, _) => { _work.BlockHotkeyEnabled = true; Save(); SettingsChanged?.Invoke(_work); };
-        ChkBlockHotkey.Unchecked += (_, _) => { _work.BlockHotkeyEnabled = false; Save(); SettingsChanged?.Invoke(_work); };
-        ChkHotkey.Unchecked += (_, _) => { _work.HotkeyEnabled = false; Save(); SettingsChanged?.Invoke(_work); };
+        ChkBlockShow.Checked += (_, _) => { if (_loading) return; _work.BlockShowWhenCovered = true; Save(); SettingsChanged?.Invoke(_work); };
+        ChkBlockShow.Unchecked += (_, _) => { if (_loading) return; _work.BlockShowWhenCovered = false; Save(); SettingsChanged?.Invoke(_work); };
+        ChkEdgeShow.Checked += (_, _) => { if (_loading) return; _work.ShowOnEdge = true; Save(); SettingsChanged?.Invoke(_work); };
+        ChkEdgeShow.Unchecked += (_, _) => { if (_loading) return; _work.ShowOnEdge = false; Save(); SettingsChanged?.Invoke(_work); };
+        ChkBorder.Checked += (_, _) => { if (_loading) return; _work.ShowBorder = true; Save(); SettingsChanged?.Invoke(_work); };
+        ChkBorder.Unchecked += (_, _) => { if (_loading) return; _work.ShowBorder = false; Save(); SettingsChanged?.Invoke(_work); };
+        ChkStartup.Checked += (_, _) => { if (_loading) return; _work.RunOnStartup = true; Save(); SettingsChanged?.Invoke(_work); };
+        ChkStartup.Unchecked += (_, _) => { if (_loading) return; _work.RunOnStartup = false; Save(); SettingsChanged?.Invoke(_work); };
+        ChkHotkey.Checked += (_, _) => { if (_loading) return; _work.HotkeyEnabled = true; Save(); SettingsChanged?.Invoke(_work); };
+        ChkBlockHotkey.Checked += (_, _) => { if (_loading) return; _work.BlockHotkeyEnabled = true; Save(); SettingsChanged?.Invoke(_work); };
+        ChkBlockHotkey.Unchecked += (_, _) => { if (_loading) return; _work.BlockHotkeyEnabled = false; Save(); SettingsChanged?.Invoke(_work); };
+        ChkHotkey.Unchecked += (_, _) => { if (_loading) return; _work.HotkeyEnabled = false; Save(); SettingsChanged?.Invoke(_work); };
         CmbModifier.SelectionChanged += (_, _) =>
         {
+            if (_loading) return;
             if (CmbModifier.SelectedItem is string s) { _work.HotkeyModifier = s; Save(); SettingsChanged?.Invoke(_work); }
         };
         CmbBlockModifier.SelectionChanged += (_, _) =>
         {
+            if (_loading) return;
             if (CmbBlockModifier.SelectedItem is string s) { _work.BlockHotkeyModifier = s; Save(); SettingsChanged?.Invoke(_work); }
         };
         CmbHotkeyKey.SelectionChanged += (_, _) =>
         {
+            if (_loading) return;
             if (CmbHotkeyKey.SelectedItem is string s) { _work.HotkeyKey = s; Save(); SettingsChanged?.Invoke(_work); }
         };
         CmbBlockKey.SelectionChanged += (_, _) =>
         {
+            if (_loading) return;
             if (CmbBlockKey.SelectedItem is string s) { _work.BlockHotkeyKey = s; Save(); SettingsChanged?.Invoke(_work); }
         };
         ItemList.SelectionChanged += (_, _) => UpdateButtons();
@@ -406,7 +414,15 @@ public partial class SettingsWindow : Window
         ItemList.ItemsSource = _work.Items;
     }
 
-    /// <summary>外部（如 F3 快捷键）切换“被覆盖禁止唤出”后同步勾选框状态。</summary>
+    /// <summary>外部（如 F3 快捷键）切换“被覆盖禁止唤出”后同步 _work 与勾选框状态。</summary>
+    public void RefreshBlockMode(bool newValue)
+    {
+        _work.BlockShowWhenCovered = newValue;
+        if (ChkBlockShow.IsChecked != newValue)
+            ChkBlockShow.IsChecked = newValue;
+    }
+
+    /// <summary>兼容无参调用，读取 _work 当前值同步勾选框。</summary>
     public void RefreshBlockMode()
     {
         if (ChkBlockShow.IsChecked != _work.BlockShowWhenCovered)
@@ -571,6 +587,7 @@ public partial class SettingsWindow : Window
         _work.BlockHotkeyEnabled = def.BlockHotkeyEnabled;
         _work.BlockHotkeyModifier = def.BlockHotkeyModifier;
         _work.BlockHotkeyKey = def.BlockHotkeyKey;
+        _work.BlockShowWhenCovered = def.BlockShowWhenCovered;
         _work.Items = def.Items;
         LoadFromWork();
         Save();

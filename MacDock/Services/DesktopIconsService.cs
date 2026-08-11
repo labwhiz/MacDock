@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -53,8 +53,26 @@ public class DesktopIconsService
 
     private void EnsureHooked()
     {
+        // 验证缓存句柄是否仍然有效（Explorer 重启后旧句柄会失效）
+        if (_hooked)
+        {
+            bool allValid = _listViews.Count > 0;
+            foreach (var lv in _listViews)
+            {
+                if (lv == IntPtr.Zero || !Win32.IsWindow(lv))
+                {
+                    allValid = false;
+                    break;
+                }
+            }
+            if (allValid) return;
+
+            // 句柄已失效（如 Explorer 重启），重新枚举
+            _listViews.Clear();
+            _hooked = false;
+        }
+
         if (_hooked) return;
-        _listViews.Clear();
         _enumWindowsProc = OnEnumWindows;
         _enumChildProc = OnEnumChild;
         EnumWindows(_enumWindowsProc, IntPtr.Zero);
