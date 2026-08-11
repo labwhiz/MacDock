@@ -248,7 +248,7 @@ private void RefreshLayoutIfMonitorChanged()
 
 ## 四、🟠 低危/健壮性问题
 
-### B11. `MainWindow.OnItemMouseMove` 拖拽排序缺少索引越界保护
+### B11. `MainWindow.OnItemMouseMove` 拖拽排序缺少索引越界保护 ✅ 已修复
 
 **文件**: `MacDock/MainWindow.xaml.cs`（第 830–841 行）
 
@@ -267,9 +267,11 @@ if (_dragging && _settings.Items.Count > 1)
 
 `_dragIndex` 在 `OnItemMouseDown` 中设置后，如果期间有其他操作（如 `RebuildItems` 清空了 `ItemsHost.Children`），`_dragIndex` 可能指向不存在的索引。虽然都在 UI 线程上，但 `Dispatcher.BeginInvoke` 的延迟执行可能导致时序问题。
 
+> **修复状态**：在 `OnItemMouseMove` 的拖拽条件中添加 `_dragIndex >= 0 && _dragIndex < ItemsHost.Children.Count` 边界检查，防止异步刷新后索引越界。
+
 ---
 
-### B12. `Installer.StopMacDock` 中 `p.MainModule` 访问可能抛异常
+### B12. `Installer.StopMacDock` 中 `p.MainModule` 访问可能抛异常 ✅ 已修复
 
 **文件**: `installer/Installer.cs`（第 225 行）
 
@@ -279,23 +281,29 @@ string exePath = p.MainModule != null ? p.MainModule.FileName : null;
 
 访问 64/32 位不匹配进程的 `MainModule` 会抛 `Win32Exception`。虽然外层有 try-catch，但 `p.MainModule != null` 这个判断本身就会先抛异常再被 catch。应先 try-get 再判断。
 
+> **修复状态**：将 `p.MainModule != null ? p.MainModule.FileName : null` 改为独立 `try { exePath = p.MainModule?.FileName; } catch { }`，避免 null 检查时直接抛出 `Win32Exception`。
+
 ---
 
-### B13. `Win32.POINT` 与 WPF `Point` 命名混淆
+### B13. `Win32.POINT` 与 WPF `Point` 命名混淆 ✅ 已修复
 
 `Win32.POINT` 的字段名为 `X`/`Y`（大写），而 WPF 的 `System.Windows.Point` 字段名为 `X`/`Y`（也是大写）。在代码中混用时（如 `cursor.X`），编译器能区分类型，但可读性差，容易混淆哪个是物理像素、哪个是 DIP。
 
+> **修复状态**：将 `Win32.POINT` 的字段从大写 `X`/`Y` 改为小写 `x`/`y`（匹配 Win32 C 惯例），添加 XML 文档注释标明物理像素语义，与 WPF `Point.X/Y`（DIP）视觉区分。更新 `MainWindow.xaml.cs` 和 `FolderPanelWindow.cs` 中所有字段引用。
+
 ---
 
-### B14. `SettingsWindow.HotkeyKeys` 列表与 `HotkeyService.KeyToVk` 支持范围不匹配
+### B14. `SettingsWindow.HotkeyKeys` 列表与 `HotkeyService.KeyToVk` 支持范围不匹配 ✅ 已修复
 
 **文件**: `MacDock/SettingsWindow.xaml.cs`（第 33–44 行）
 
 设置窗口的可选按键列表只包含 F1-F12、0-9、A-Z、Space、Tab、Home、End。但 `HotkeyService.KeyToVk` 还支持 Enter、ESC、Delete、PgUp、PgDn、方向键等。用户在配置文件中手动设置这些键后，设置窗口虽然会动态加入选项，但用户无法从 UI 选择这些常用键。
 
+> **修复状态**：在 `BuildHotkeyKeys` 中补充 8 个缺失按键：`Enter`、`ESC`、`Delete`、`PgUp`、`PgDn`、`Left`、`Right`、`Up`、`Down`，与 `KeyToVk` 支持范围完全匹配。
+
 ---
 
-### B15. `MainWindow.ComputeWorkBottomPx` 中任务栏高度硬编码阈值
+### B15. `MainWindow.ComputeWorkBottomPx` 中任务栏高度硬编码阈值 ✅ 已修复
 
 **文件**: `MacDock/MainWindow.xaml.cs`（第 364、375 行）
 
@@ -306,6 +314,8 @@ if (trayH <= 0 || trayH > 120) trayH = 48;  // ← 48px 硬编码
 ```
 
 在超高 DPI（如 200%+ 缩放下任务栏可能超过 120px）或自定义任务栏高度的场景下，这个阈值会导致任务栏检测失败，Dock 可能与任务栏重叠。
+
+> **修复状态**：将硬编码 `120` 替换为 `(int)(120 * _dpiScale)`，将回退值 `48` 替换为 `(int)(48 * _dpiScale)`，按 DPI 缩放阈值，确保高 DPI 场景下任务栏检测正常。
 
 ---
 
