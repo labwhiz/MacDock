@@ -434,6 +434,8 @@ FodyWeavers.xsd
 installer/*.exe
 promo/
 REVIEW.md
+# 临时内容（脚本/素材/草稿），不纳入版本控制
+temp/
 # === local tooling & WorkBuddy metadata (do NOT commit) ===
 .workbuddy/
 sync-main.ps1
