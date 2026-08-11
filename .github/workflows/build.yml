@@ -1,0 +1,27 @@
+name: build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Build MacDock
+        run: dotnet build MacDock/MacDock.csproj -c Release --nologo
+
+      - name: Smoke-compile installer
+        shell: pwsh
+        run: |
+          $csc = 'C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe'
+          & $csc /nologo /target:winexe /optimize+ /out:"$env:RUNNER_TEMP\MacDock-Setup.exe" installer\Installer.cs installer\SetupForm.cs installer\Payload.cs

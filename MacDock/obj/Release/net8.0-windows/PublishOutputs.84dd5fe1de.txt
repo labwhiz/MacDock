@@ -1,5 +1,0 @@
-D:\AI\mcp-workspace\MacDock-Dev\publish\MacDock-fd\MacDock.exe
-D:\AI\mcp-workspace\MacDock-Dev\publish\MacDock-fd\MacDock.dll
-D:\AI\mcp-workspace\MacDock-Dev\publish\MacDock-fd\MacDock.deps.json
-D:\AI\mcp-workspace\MacDock-Dev\publish\MacDock-fd\MacDock.runtimeconfig.json
-D:\AI\mcp-workspace\MacDock-Dev\publish\MacDock-fd\MacDock.pdb

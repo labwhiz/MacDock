@@ -28,6 +28,12 @@ public class IconService
 
     private static readonly BitmapSource Fallback = CreateFallback();
 
+    /// <summary>允许加载的图片扩展名，防止任意文件类型进入图片解码器。</summary>
+    private static readonly HashSet<string> SupportedImageExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".ico", ".webp", ".tiff", ".wdp",
+    };
+
     public static BitmapSource GetIcon(string targetPath, int size)
     {
         var resolved = PathResolver.Resolve(targetPath);
@@ -97,6 +103,7 @@ public class IconService
     public static BitmapSource? LoadImageFile(string path, int size)
     {
         if (string.IsNullOrWhiteSpace(path) || !File.Exists(path)) return null;
+        if (!SupportedImageExtensions.Contains(Path.GetExtension(path))) return null;
         try
         {
             var uri = new Uri(path, UriKind.Absolute);
@@ -104,7 +111,8 @@ public class IconService
             bmp.BeginInit();
             bmp.CacheOption = BitmapCacheOption.OnLoad;
             bmp.UriSource = uri;
-            if (size > 0) bmp.DecodePixelWidth = Math.Max(16, size * 2);
+            // 限制解码尺寸，防止超大图片导致内存占用过高
+            if (size > 0) bmp.DecodePixelWidth = Math.Max(16, Math.Min(size * 2, 1024));
             bmp.EndInit();
             bmp.Freeze();
             return bmp;

@@ -32,6 +32,7 @@ public class SettingsService
                 var settings = JsonSerializer.Deserialize<AppSettings>(json, JsonOptions);
                 if (settings != null)
                 {
+                    Sanitize(settings);
                     if (settings.Items.Count == 0)
                         settings.Items = DefaultItems();
                     return settings;
@@ -44,6 +45,48 @@ public class SettingsService
         }
         var fresh = new AppSettings { Items = DefaultItems() };
         return fresh;
+    }
+
+    /// <summary>清理配置中的危险字段：控制字符/引号路径、控制字符参数、异常超大列表。</summary>
+    private static void Sanitize(AppSettings settings)
+    {
+        if (settings.Items == null)
+        {
+            settings.Items = DefaultItems();
+            return;
+        }
+        SanitizeItems(settings.Items);
+        if (settings.Items.Count > 200) settings.Items.RemoveRange(200, settings.Items.Count - 200);
+    }
+
+    private static void SanitizeItems(List<DockItemModel> items)
+    {
+        items.RemoveAll(i => i == null || !IsSafePath(i.TargetPath) || !IsSafeArguments(i.Arguments));
+        foreach (var item in items)
+        {
+            if (item.FolderItems != null) SanitizeItems(item.FolderItems);
+        }
+    }
+
+    private static bool IsSafePath(string? path)
+    {
+        if (string.IsNullOrEmpty(path)) return true; // 内置文件夹占位允许空路径
+        foreach (var ch in path)
+        {
+            if (char.IsControl(ch) || ch == '"') return false;
+        }
+        return true;
+    }
+
+    private static bool IsSafeArguments(string arguments)
+    {
+        if (string.IsNullOrEmpty(arguments)) return true;
+        if (arguments.Length > 1024) return false;
+        foreach (var ch in arguments)
+        {
+            if (char.IsControl(ch)) return false;
+        }
+        return true;
     }
 
     public void Save(AppSettings settings)

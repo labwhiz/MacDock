@@ -1,4 +1,4 @@
-﻿﻿using System;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -41,7 +41,9 @@ public static class ProcessService
         {
             if (item.TargetPath.StartsWith("shell:", StringComparison.OrdinalIgnoreCase))
             {
-                Process.Start(new ProcessStartInfo("explorer.exe", $"\"{item.TargetPath}\"") { UseShellExecute = true });
+                var uri = SanitizeShellUri(item.TargetPath);
+                if (uri == null) return;
+                Process.Start(new ProcessStartInfo("explorer.exe", uri) { UseShellExecute = true });
                 return;
             }
 
@@ -67,7 +69,11 @@ public static class ProcessService
                 FileName = target,
                 UseShellExecute = true,
             };
-            if (!string.IsNullOrWhiteSpace(item.Arguments)) psi.Arguments = item.Arguments;
+            if (!string.IsNullOrWhiteSpace(item.Arguments))
+            {
+                if (!IsSafeArguments(item.Arguments)) return;
+                psi.Arguments = item.Arguments;
+            }
             if (Path.IsPathRooted(target))
             {
                 var dir = Path.GetDirectoryName(target);
@@ -79,6 +85,30 @@ public static class ProcessService
         {
             // 启动失败静默
         }
+    }
+
+    /// <summary>校验 shell: URI，仅允许安全字符，防止参数注入。</summary>
+    private static string? SanitizeShellUri(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return null;
+        if (!value.StartsWith("shell:", StringComparison.OrdinalIgnoreCase)) return null;
+        foreach (var ch in value)
+        {
+            if (char.IsLetterOrDigit(ch) || ch is ':' or '_' or '-' or '.' or ' ' or '{' or '}' or '/' or '\\') continue;
+            return null;
+        }
+        return value;
+    }
+
+    /// <summary>启动参数仅允许可打印字符，禁止控制字符。</summary>
+    private static bool IsSafeArguments(string arguments)
+    {
+        if (arguments.Length > 1024) return false;
+        foreach (var ch in arguments)
+        {
+            if (char.IsControl(ch)) return false;
+        }
+        return true;
     }
 
     /// <summary>若已运行则激活其主窗口，否则启动。</summary>

@@ -589,7 +589,8 @@ public partial class MainWindow : Window
             {
                 try
                 {
-                    var psi = new System.Diagnostics.ProcessStartInfo("explorer.exe", $"/select,\"{item.TargetPath}\"") { UseShellExecute = true };
+                    var psi = new System.Diagnostics.ProcessStartInfo("explorer.exe") { UseShellExecute = false };
+                    psi.ArgumentList.Add("/select," + item.TargetPath);
                     System.Diagnostics.Process.Start(psi);
                 }
                 catch (Exception) { }
@@ -900,7 +901,9 @@ public partial class MainWindow : Window
     {
         try
         {
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", "\"" + path + "\"") { UseShellExecute = true });
+            var psi = new System.Diagnostics.ProcessStartInfo("explorer.exe") { UseShellExecute = false };
+            psi.ArgumentList.Add(path);
+            System.Diagnostics.Process.Start(psi);
         }
         catch (Exception) { }
     }
