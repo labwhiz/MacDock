@@ -427,3 +427,11 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# === 项目专属规则 ===
+.claude/
+.dotnet-home/
+installer/*.exe
+promo/images/
+promo/pages/
+REVIEW.md
