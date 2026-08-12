@@ -321,7 +321,7 @@ public partial class MainWindow : Window
         var mon = GetMonitorInfoOf(pt);
         double scale = _dpiScale;
         bool dockTop = _settings.DockPosition == "TopCenter";
-        double margin = 10;
+        double margin = ShellPadding;
 
         // Taskbar avoidance: keep the dock above the bottom taskbar popup area (仅底部位置)
         double workLeft = mon.rcWork.Left / scale;
@@ -867,7 +867,7 @@ public partial class MainWindow : Window
         else if (!wasMoved && dragIndex >= 0 && dragIndex < _settings.Items.Count)
         {
             var item = _settings.Items[dragIndex];
-            Log($"CLICK drag={_dragging} moved={_clickMoved} idx={_dragIndex} item={item.Name} path={item.TargetPath}");
+            Log($"CLICK drag={wasDragging} moved={wasMoved} idx={dragIndex} item={item.Name} path={item.TargetPath}");
             if (item.FolderItems != null)
             {
                 ToggleFolderPanel(item, root);
