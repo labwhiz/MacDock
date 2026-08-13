@@ -18,8 +18,7 @@ MacDock-Setup.exe /uninstall D:\MacDock
 ```
 
 ## 环境要求
-- Windows 10/11
-- .NET 8 桌面运行时（Microsoft.WindowsDesktop.App 8.x）——运行 MacDock 本身所需
+- Windows 10/11（内置 .NET Framework 4.8，无需安装任何运行时）
 - 安装程序为 .NET Framework 4.8 单文件，Windows 10/11 自带，无需额外安装
 
 ## 说明

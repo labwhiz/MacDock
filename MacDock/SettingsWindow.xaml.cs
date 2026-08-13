@@ -355,7 +355,7 @@ public partial class SettingsWindow : Window
         if (_loading || sender is not TextBox tb || tb.Tag is not NumBoxBinding b) return;
         if (TryParseNum(tb.Text, out double v))
         {
-            v = Math.Clamp(v, b.Min, b.Max);
+            v = CommonUtils.Clamp(v, b.Min, b.Max);
             b.Apply(v);
             if (Math.Abs(b.Slider.Value - v) > 1e-9) b.Slider.Value = v;
             UpdateLabels();
@@ -381,7 +381,7 @@ public partial class SettingsWindow : Window
     {
         if (_loading) return;
         double v = TryParseNum(tb.Text, out double p) ? p : b.Current();
-        v = Math.Clamp(v, b.Min, b.Max);
+        v = CommonUtils.Clamp(v, b.Min, b.Max);
         tb.Text = v.ToString(b.Format, CultureInfo.InvariantCulture);
         b.Apply(v);
         if (Math.Abs(b.Slider.Value - v) > 1e-9) b.Slider.Value = v;

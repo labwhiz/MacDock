@@ -121,7 +121,7 @@ public class FolderPanelWindow : Window
         {
             "Solid" => (byte)255,
             "Transparent" => (byte)0,
-            _ => (byte)Math.Round(255 * Math.Clamp(_settings.BackgroundOpacity, 0, 1)),
+            _ => (byte)Math.Round(255 * CommonUtils.Clamp(_settings.BackgroundOpacity, 0, 1)),
         };
 
         var border = new Border

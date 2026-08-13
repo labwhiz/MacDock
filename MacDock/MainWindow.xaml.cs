@@ -203,7 +203,7 @@ public partial class MainWindow : Window
         {
             "Solid" => (byte)255,
             "Transparent" => (byte)0,
-            _ => (byte)Math.Round(255 * Math.Clamp(_settings.BackgroundOpacity, 0, 1)),
+            _ => (byte)Math.Round(255 * CommonUtils.Clamp(_settings.BackgroundOpacity, 0, 1)),
         };
         DockShell.Background = new SolidColorBrush(Color.FromArgb(alpha, color.R, color.G, color.B));
         DockShell.BorderThickness = _settings.ShowBorder ? new Thickness(1) : new Thickness(0);
@@ -305,7 +305,7 @@ public partial class MainWindow : Window
         double pad = ShellPadding;
         double borderT = _settings.ShowBorder ? 1 : 0;
         // 背景栏按“未放大”的图标总宽计算，悬停放大时图标向背景外侧生长（窗口保留放大余量，避免图标被裁剪）
-        double boost = Math.Clamp(_settings.MagnifyBoost, 0.0, 2.0);
+        double boost = CommonUtils.Clamp(_settings.MagnifyBoost, 0.0, 2.0);
         double baseSize = _baseSize;
         double magSize = baseSize * (1 + boost);
         double contentW = count * baseSize + Math.Max(0, count - 1) * _spacing;
@@ -594,7 +594,7 @@ public partial class MainWindow : Window
                 try
                 {
                     var psi = new System.Diagnostics.ProcessStartInfo("explorer.exe") { UseShellExecute = false };
-                    psi.ArgumentList.Add("/select," + item.TargetPath);
+                    psi.Arguments = "\"/select," + item.TargetPath + "\"";
                     System.Diagnostics.Process.Start(psi);
                 }
                 catch (Exception) { }
@@ -911,7 +911,7 @@ public partial class MainWindow : Window
         try
         {
             var psi = new System.Diagnostics.ProcessStartInfo("explorer.exe") { UseShellExecute = false };
-            psi.ArgumentList.Add(path);
+            psi.Arguments = "\"" + path + "\"";
             System.Diagnostics.Process.Start(psi);
         }
         catch (Exception) { }
@@ -971,7 +971,7 @@ public partial class MainWindow : Window
         if (!_dockVisible) return;
         var cursor = GetCursorScreenPoint();
         var local = PointFromScreen(new Point(cursor.x, cursor.y));
-        double boost = Math.Clamp(_settings.MagnifyBoost, 0, 2);
+        double boost = CommonUtils.Clamp(_settings.MagnifyBoost, 0, 2);
         double pad = ShellPadding;
         double borderT = _settings.ShowBorder ? 1 : 0;
         double spacing = _spacing;
@@ -1026,7 +1026,7 @@ public partial class MainWindow : Window
     {
         if (!_dockVisible) _slideTargetY = HideSlideOffset();
         // 动画时长：按设置换算每帧插值系数（约 60fps 下衰减到 0.1%）
-        double duration = Math.Clamp(_settings.AnimationDuration, 0.05, 5.0);
+        double duration = CommonUtils.Clamp(_settings.AnimationDuration, 0.05, 5.0);
         double k = 1 - Math.Pow(0.001, 1.0 / (duration * 60.0));
         if (Math.Abs(_slideY - _slideTargetY) > 0.05)
             _slideY += (_slideTargetY - _slideY) * k;
@@ -1396,7 +1396,7 @@ public partial class MainWindow : Window
             if (key == null) return;
             if (_settings.RunOnStartup)
             {
-                var exe = Environment.ProcessPath;
+                var exe = System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName;
                 if (!string.IsNullOrEmpty(exe))
                     key.SetValue("MacDock", "\"" + exe + "\"");
             }

@@ -64,4 +64,12 @@ public static class CommonUtils
     /// <summary>图标提取尺寸按 16px 取整分桶，拖动尺寸滑块时复用缓存图标，避免 UI 卡顿。</summary>
     public static int IconExtractSize(double displaySize) =>
         Math.Max(32, (int)(Math.Round(displaySize * 2 / 16.0) * 16));
+
+    /// <summary>数值夹取（.NET Framework 4.8 无 Math.Clamp）。</summary>
+    public static double Clamp(double value, double min, double max)
+    {
+        if (value < min) return min;
+        if (value > max) return max;
+        return value;
+    }
 }

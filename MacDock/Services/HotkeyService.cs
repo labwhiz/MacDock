@@ -71,7 +71,7 @@ public class HotkeyService : IDisposable
         var k = key.Trim().ToUpperInvariant();
         if (k.Length == 1 && k[0] is >= 'A' and <= 'Z') return (uint)k[0];
         if (k.Length == 1 && k[0] is >= '0' and <= '9') return (uint)k[0];
-        if (k.StartsWith('F') && k.Length > 1 && int.TryParse(k[1..], out var n) && n is >= 1 and <= 24)
+        if (k.StartsWith("F") && k.Length > 1 && int.TryParse(k.Substring(1), out var n) && n is >= 1 and <= 24)
             return (uint)(0x6F + n);
         return k switch
         {

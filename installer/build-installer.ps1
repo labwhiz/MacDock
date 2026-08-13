@@ -18,20 +18,21 @@ foreach ($c in $cscCandidates) {
 if (-not $csc) { throw '未找到 csc.exe（需要 .NET Framework 4.x 的 C# 编译器，用于编译安装器）' }
 $ico = Join-Path $root 'MacDock\Assets\app.ico'
 
-# 1) 仅关闭从工作区启动的 MacDock（不影响其他位置已安装的版本），然后发布（框架依赖，目标机需装 .NET 8 桌面运行时）
+# 1) 仅关闭从工作区启动的 MacDock（不影响其他位置已安装的版本），然后发布
+#    （目标 .NET Framework 4.8，Win10/11 内置，无需安装 .NET 8 运行时）
 Get-Process MacDock -ErrorAction SilentlyContinue | Where-Object {
     try { $_.Path -and $_.Path.StartsWith($root, [System.StringComparison]::OrdinalIgnoreCase) } catch { $false }
 } | Stop-Process -Force
+# 清空旧发布目录，避免残留 net8 时代的 MacDock.dll / deps.json / runtimeconfig.json
+if (Test-Path -LiteralPath $publishDir) { Remove-Item -LiteralPath $publishDir -Recurse -Force }
 dotnet publish $proj -c Release -o $publishDir
 if ($LASTEXITCODE -ne 0) { throw 'dotnet publish 失败' }
 
 # 2) 生成内嵌负载 Payload.cs
-$files = @(
-  @{ Path = Join-Path $publishDir 'MacDock.exe';            Name = 'MacDock.exe' },
-  @{ Path = Join-Path $publishDir 'MacDock.dll';            Name = 'MacDock.dll' },
-  @{ Path = Join-Path $publishDir 'MacDock.deps.json';      Name = 'MacDock.deps.json' },
-  @{ Path = Join-Path $publishDir 'MacDock.runtimeconfig.json'; Name = 'MacDock.runtimeconfig.json' }
-)
+# net48 发布产物：exe（托管主程序）、exe.config、依赖 dll、pdb（若有）
+$files = Get-ChildItem -LiteralPath $publishDir -File | Where-Object { $_.Extension -in @('.exe', '.dll', '.config', '.pdb') } |
+    ForEach-Object { @{ Path = $_.FullName; Name = $_.Name } }
+if ($files.Count -eq 0) { throw '未找到发布产物，dotnet publish 输出为空' }
 $sb = New-Object System.Text.StringBuilder
 [void]$sb.AppendLine('// Auto-generated payload (built by build-installer.ps1). Do not edit by hand.')
 [void]$sb.AppendLine('namespace MacDockSetup')

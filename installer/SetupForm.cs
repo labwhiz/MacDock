@@ -119,7 +119,7 @@ namespace MacDockSetup
             Controls.Add(lblStatus);
 
             Label lblFooter = new Label();
-            lblFooter.Text = "版本 " + AppInfo.Version + " · 需要 Windows 10/11 与 .NET 8 桌面运行时";
+            lblFooter.Text = "版本 " + AppInfo.Version + " · 需要 Windows 10/11（内置 .NET Framework 4.8）";
             lblFooter.ForeColor = Color.FromArgb(160, 160, 160);
             lblFooter.Location = new Point(20, 304);
             lblFooter.AutoSize = true;
@@ -162,12 +162,12 @@ namespace MacDockSetup
             }
             catch { }
 
-            if (!Installer.DotNet8DesktopRuntimePresent())
+            if (!Installer.DotNetFramework48Present())
             {
                 DialogResult r = MessageBox.Show(this,
-                    "未检测到 .NET 8 桌面运行时，安装后 MacDock 可能无法启动。\n" +
-                    "建议先安装 .NET Desktop Runtime 8.x，是否仍然继续安装？",
-                    "缺少运行时", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                    "未检测到 .NET Framework 4.8，安装后 MacDock 可能无法启动。\n" +
+                    "Win10/11 均内置 .NET Framework 4.8，请先更新 Windows，是否仍然继续安装？",
+                    "缺少 .NET Framework", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
                 if (r != DialogResult.Yes) return;
             }
 

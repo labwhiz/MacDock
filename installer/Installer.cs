@@ -14,7 +14,7 @@ namespace MacDockSetup
     {
         public const string Name = "MacDock";
         public const string DisplayName = "MacDock 桌面 Dock";
-        public const string Version = "1.3.1";
+        public const string Version = "1.4.0";
         public const string Publisher = "MacDock";
         public const string UninstallSubKey = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\MacDock";
         public const string RunValueName = "MacDock";
@@ -141,12 +141,19 @@ namespace MacDockSetup
                     catch { }
                 }
 
-                string[] known = new string[]
+                // 优先删除本次安装写入的负载文件（与 PayloadFiles.Names 同步）
+                foreach (string f in PayloadFiles.Names)
                 {
-                    "MacDock.exe", "MacDock.dll", "MacDock.deps.json", "MacDock.runtimeconfig.json",
-                    "MacDock.pdb", AppInfo.UninstallerFileName
+                    string p = Path.Combine(dir, f);
+                    try { if (File.Exists(p)) File.Delete(p); } catch { }
+                }
+                // 兼容清理旧版（net8 时代）产物与卸载器自身
+                string[] legacy = new string[]
+                {
+                    "MacDock.dll", "MacDock.deps.json", "MacDock.runtimeconfig.json", "MacDock.pdb",
+                    AppInfo.UninstallerFileName
                 };
-                foreach (string f in known)
+                foreach (string f in legacy)
                 {
                     string p = Path.Combine(dir, f);
                     try { if (File.Exists(p)) File.Delete(p); } catch { }
@@ -183,48 +190,20 @@ namespace MacDockSetup
             catch { return false; }
         }
 
-        public static bool DotNet8DesktopRuntimePresent()
+        /// <summary>检测 .NET Framework 4.8 是否可用（Win10/11 内置；Release 值 >= 528040 表示 4.8）。</summary>
+        public static bool DotNetFramework48Present()
         {
             try
             {
-                foreach (string arch in new string[] { "x64", "x86" })
+                using (RegistryKey key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full"))
                 {
-                    string keyPath = @"SOFTWARE\dotnet\Setup\InstalledVersions\" + arch + @"\sharedfx\Microsoft.WindowsDesktop.App";
-                    using (RegistryKey key = Registry.LocalMachine.OpenSubKey(keyPath))
-                    {
-                        if (key == null) continue;
-                        foreach (string name in key.GetValueNames())
-                        {
-                            string v = (key.GetValue(name) ?? "").ToString();
-                            if (IsDesktopRuntimeCompatible(v)) return true;
-                        }
-                    }
-                }
-                // 32-bit registry view fallback
-                using (RegistryKey key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\WOW6432Node\dotnet\Setup\InstalledVersions\x64\sharedfx\Microsoft.WindowsDesktop.App"))
-                {
-                    if (key != null)
-                    {
-                        foreach (string name in key.GetValueNames())
-                        {
-                            string v = (key.GetValue(name) ?? "").ToString();
-                            if (IsDesktopRuntimeCompatible(v)) return true;
-                        }
-                    }
+                    if (key == null) return false;
+                    object release = key.GetValue("Release");
+                    int rel;
+                    return release != null && int.TryParse(release.ToString(), out rel) && rel >= 528040;
                 }
             }
-            catch { }
-            return false;
-        }
-
-        /// <summary>判断已安装的桌面运行时主版本是否 >= 8（兼容未来的 9.x/10.x，9.4）。</summary>
-        private static bool IsDesktopRuntimeCompatible(string version)
-        {
-            if (string.IsNullOrWhiteSpace(version)) return false;
-            int dot = version.IndexOf('.');
-            string majorText = dot >= 0 ? version.Substring(0, dot) : version;
-            int major;
-            return int.TryParse(majorText, out major) && major >= 8;
+            catch { return false; }
         }
 
         private static void StopMacDock(string installDir)
